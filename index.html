@@ -1,0 +1,1339 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>HeatTwin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&display=swap">
+<style>
+/* Layout: a persistent "field day" control bar drives four tabs (worker phone, supervisor, evidence, governance). */
+:root{
+  --bg:#EDF0F1; --surface:#FFFFFF; --surface2:#F5F7F8; --ink:#182126; --muted:#56646D; --line:#D2D9DD;
+  --accent:#0B6A85; --accent-ink:#FFFFFF; --accent-soft:#DCEEF3; --band:#E3E9EC;
+  --lv0:#2C7A4B; --lv0ink:#FFFFFF; --lv1:#E5B800; --lv1ink:#1E1700; --lv2:#E4690C; --lv2ink:#FFFFFF; --lv3:#C42727; --lv3ink:#FFFFFF; --lv4:#7A1247; --lv4ink:#FFFFFF;
+  --truth:#7A8790; --good:#1F7A46; --bad:#B3261E;
+  --f-head:'Barlow Condensed','Arial Narrow',sans-serif;
+  --f-body:'IBM Plex Sans','Noto Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1519; --surface:#172026; --surface2:#1D2830; --ink:#E5ECEF; --muted:#9AA9B2; --line:#2B3841;
+    --accent:#52B8D6; --accent-ink:#06222B; --accent-soft:#17323B; --band:#22303A;
+    --lv0:#46B073; --lv0ink:#05200F; --lv1:#F0C419; --lv1ink:#1E1700; --lv2:#F08030; --lv2ink:#1F0E00; --lv3:#E55353; --lv3ink:#230404; --lv4:#C5458A; --lv4ink:#FFFFFF;
+    --truth:#8A98A1; --good:#58C48A; --bad:#FF8A80; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1519; --surface:#172026; --surface2:#1D2830; --ink:#E5ECEF; --muted:#9AA9B2; --line:#2B3841;
+  --accent:#52B8D6; --accent-ink:#06222B; --accent-soft:#17323B; --band:#22303A;
+  --lv0:#46B073; --lv0ink:#05200F; --lv1:#F0C419; --lv1ink:#1E1700; --lv2:#F08030; --lv2ink:#1F0E00; --lv3:#E55353; --lv3ink:#230404; --lv4:#C5458A; --lv4ink:#FFFFFF;
+  --truth:#8A98A1; --good:#58C48A; --bad:#FF8A80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-head);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:34px;line-height:1}
+h2{font-size:24px;line-height:1.1}
+h3{font-size:18px;line-height:1.15}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:6px;min-width:0}
+.brand-row{display:flex;align-items:center;gap:10px}
+.mark{width:26px;height:26px;border-radius:50% 50% 50% 4px;background:linear-gradient(160deg,var(--lv1),var(--lv2) 55%,var(--lv3));flex:none}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+
+.bar{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;gap:14px 20px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));align-items:end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field select{background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+.clock{grid-column:span 2;min-width:0}
+@media (max-width:520px){.clock{grid-column:auto}}
+.clock-row{display:flex;align-items:center;gap:10px}
+.clock-row input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.time{font-family:var(--f-mono);font-size:20px;font-weight:500;min-width:64px}
+.toggle{display:flex;align-items:flex-start;gap:9px;cursor:pointer;line-height:1.3}
+.toggle input{margin-top:2px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.sim-note{grid-column:1/-1;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 16px;cursor:pointer;font-family:var(--f-head);font-weight:600;font-size:19px;letter-spacing:.02em;color:var(--muted);white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.panel[hidden]{display:none}
+.panel{display:flex;flex-direction:column;gap:16px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.grid2{display:grid;gap:16px;grid-template-columns:minmax(0,380px) minmax(0,1fr);align-items:start}
+.gridS{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));align-items:start}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.phone{border:1px solid var(--line);border-radius:22px;padding:14px;background:var(--surface);display:flex;flex-direction:column;gap:12px;max-width:420px;width:100%}
+.phone-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.alert{border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;background:var(--lv0);color:var(--lv0ink)}
+.alert.l1{background:var(--lv1);color:var(--lv1ink)} .alert.l2{background:var(--lv2);color:var(--lv2ink)}
+.alert.l3{background:var(--lv3);color:var(--lv3ink)} .alert.l4{background:var(--lv4);color:var(--lv4ink)}
+.alert .lvname{font-family:var(--f-head);font-weight:700;font-size:38px;line-height:1}
+.alert .act{font-size:16px;line-height:1.45;font-weight:500}
+.alert .lvtag{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.rtl{direction:rtl;text-align:right}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--surface2);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font-family:var(--f-mono);font-size:19px;font-weight:500}
+.gauge{height:10px;border-radius:5px;background:linear-gradient(90deg,var(--lv0),var(--lv1) 40%,var(--lv2) 62%,var(--lv3) 82%,var(--lv4));position:relative;margin-top:6px}
+.gauge i{position:absolute;top:-4px;width:4px;height:18px;border-radius:2px;background:var(--ink);transform:translateX(-2px)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;background:var(--surface2)}
+.chip.warn{border-color:var(--lv2)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.sym{display:flex;flex-wrap:wrap;gap:8px}
+
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart text{font-family:var(--f-mono);font-size:10.5px;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.kpi{background:var(--surface2);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font-family:var(--f-head);font-size:28px;line-height:1.05}
+.stack{display:flex;height:28px;border-radius:6px;overflow:hidden;background:var(--band)}
+.stack span{display:block;height:100%}
+.stack-l{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin-top:8px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:baseline}
+.notice{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 12px;border-radius:0 6px 6px 0;font-size:13px}
+.notice.warn{border-left-color:var(--lv2)}
+
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--surface2);font-weight:600;white-space:nowrap}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.hl td{background:var(--accent-soft)}
+.mini{display:inline-block;height:6px;border-radius:3px;background:var(--accent);vertical-align:middle;margin-left:6px;min-width:1px}
+.mini.bad{background:var(--lv3)}
+.two{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+ul.clean{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.yes li::marker{color:var(--good)} .no li::marker{color:var(--bad)}
+.log{font-family:var(--f-mono);font-size:12px;background:var(--surface2);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:3px;overflow-x:auto}
+.inline-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.inline-ctl select{background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.fgrid{display:grid;gap:12px 16px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.field input[type=text],.field input[type=number]{background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:100%}
+.field input[type=range]{accent-color:var(--accent);width:100%}
+.field[hidden]{display:none}
+.lvrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="brand-row"><span class="mark" aria-hidden="true"></span><h1>HeatTwin</h1></div>
+      <p class="muted">Heat-strain early warning for outdoor and industrial crews. Climate-Resilient Worker Health, Future Health Digital Innovation Challenge.</p>
+    </div>
+    <button class="btn" id="theme" type="button">Switch theme</button>
+  </header>
+
+  <section class="bar" id="simBar" aria-label="Field day controls">
+    <div class="field"><label class="label" for="cond">Weather on site</label>
+      <select id="cond"></select></div>
+    <div class="field clock"><label class="label" for="clock">Shift time</label>
+      <div class="clock-row"><button class="btn" id="play" type="button" aria-label="Play or pause the shift replay">Play</button>
+      <input id="clock" type="range" min="0" max="479" step="1" value="240"><span class="time" id="timeLbl">11:00</span></div></div>
+    <label class="toggle" for="wear"><input id="wear" type="checkbox" checked><span><b>Worker shares heart rate</b><br><span class="muted">Optional wearable, off by default in real use</span></span></label>
+    <label class="toggle" for="outage"><input id="outage" type="checkbox"><span><b>Network outage 11:00 to 13:00</b><br><span class="muted">Weather feed lost</span></span></label>
+    <label class="toggle" for="dead"><input id="dead" type="checkbox"><span><b>Site weather station offline</b><br><span class="muted">No site data all day</span></span></label>
+    <div class="field"><button class="btn" id="reseed" type="button">New simulated crew</button></div>
+    <p class="sim-note">This is a replay of a simulated 12-person crew on a simulated shift (07:00 to 15:00). The twin sees only noisy weather, planned work and optional heart rate. The simulator keeps a hidden true body temperature that the twin never sees. No real health data is used anywhere.</p>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" id="tab-worker" aria-selected="true" aria-controls="p-worker" type="button">Worker</button>
+    <button class="tab" role="tab" id="tab-live" aria-selected="false" aria-controls="p-live" type="button">Live check</button>
+    <button class="tab" role="tab" id="tab-sup" aria-selected="false" aria-controls="p-sup" type="button">Supervisor</button>
+    <button class="tab" role="tab" id="tab-ev" aria-selected="false" aria-controls="p-ev" type="button">Evidence</button>
+    <button class="tab" role="tab" id="tab-gov" aria-selected="false" aria-controls="p-gov" type="button">Governance</button>
+  </nav>
+
+  <section class="panel" id="p-worker" role="tabpanel" aria-labelledby="tab-worker">
+    <div class="grid2">
+      <div class="phone" aria-label="Worker phone screen">
+        <div class="phone-head">
+          <div class="field" style="flex:1;min-width:0"><label class="label" for="sel">Worker device</label><select id="sel"></select></div>
+          <div class="field" style="width:120px"><label class="label" for="lang">Language</label><select id="lang"></select></div>
+        </div>
+        <div id="alert" class="alert" aria-live="polite"></div>
+        <div class="stat-row">
+          <div class="stat"><span class="label">Time to safe limit</span><b id="ttl">-</b><span class="muted" id="ttlNote" style="font-size:12px"></span></div>
+          <div class="stat"><span class="label">Body heat load (estimate)</span><b id="tcest">-</b><div class="gauge" aria-hidden="true"><i id="gmark"></i></div></div>
+        </div>
+        <div class="chips" id="wchips"></div>
+        <div>
+          <p class="label" style="margin-bottom:6px">Report how you feel</p>
+          <div class="sym">
+            <button class="btn" id="symMild" type="button" aria-pressed="false">I feel unwell</button>
+            <button class="btn" id="symSev" type="button" aria-pressed="false">Severe symptoms</button>
+          </div>
+        </div>
+        <p class="muted" style="font-size:12px">Alert wording is a draft translation. Native-speaking occupational health staff must review it before field use.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+        <div class="card chart">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <h3>This worker's shift</h3>
+            <label class="toggle" for="truth" style="align-items:center"><input id="truth" type="checkbox"><span>Show simulator ground truth</span></label>
+          </div>
+          <p class="muted" id="profLine" style="margin:4px 0 10px"></p>
+          <div id="wchart"></div>
+          <div class="legend" id="wlegend"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:6px">What the worker's phone knows</h3>
+          <p id="knows" class="muted"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-live" role="tabpanel" aria-labelledby="tab-live" hidden>
+    <div class="notice">This tab uses <b>real current weather</b> for a place you choose and <b>your own inputs</b>. There is no simulated worker here. It is an estimate for the next block of work, not a measurement of your body and not medical advice.</div>
+    <div class="card">
+      <div class="fgrid">
+        <div class="field"><label class="label" for="lvSrc">Weather source</label>
+          <select id="lvSrc"><option value="live">Live weather for a place</option><option value="manual">I enter conditions</option><option value="none">No weather data (offline defaults)</option></select></div>
+        <div class="field" id="lvLocBox" style="grid-column:span 2"><label class="label" for="lvPlace">Place</label>
+          <div class="lvrow"><input type="text" id="lvPlace" placeholder="City, e.g. Abu Dhabi" style="flex:1;min-width:150px;background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:7px 8px">
+          <button class="btn" id="lvSearch" type="button">Search</button><button class="btn" id="lvGeo" type="button">Use my location</button></div></div>
+        <div class="field" id="lvManA" hidden><label class="label" for="lvTa">Air temperature, °C</label><input type="number" id="lvTa" value="40" min="-10" max="60" step="0.5"></div>
+        <div class="field" id="lvManB" hidden><label class="label" for="lvRh">Humidity, %</label><input type="number" id="lvRh" value="45" min="5" max="100" step="1"></div>
+        <div class="field" id="lvManC" hidden><label class="label" for="lvSun">Sun</label><select id="lvSun"><option value="clear">Clear, direct sun</option><option value="part">Partly cloudy</option><option value="over">Overcast</option><option value="night">Night</option></select></div>
+        <div class="field"><label class="label" for="lvTask">Your job right now</label><select id="lvTask"><option value="light">Light work (walking, light tools)</option><option value="moderate" selected>Moderate work (carrying, steady labour)</option><option value="heavy">Heavy work (digging, lifting, hauling)</option></select></div>
+        <div class="field"><label class="label" for="lvPpe">Clothing</label><select id="lvPpe"><option value="cotton">Light cotton coverall</option><option value="double">Double-layer or heavy coverall</option><option value="imperm">Vapour-barrier suit</option></select></div>
+        <div class="field"><label class="label" for="lvAcc">Used to working in heat?</label><select id="lvAcc"><option value="0.3">New (under about a week)</option><option value="0.7" selected>Partly (1 to 2 weeks)</option><option value="1">Fully acclimatised</option></select></div>
+        <div class="field"><label class="label" for="lvDur">Next work block: <span id="lvDurLbl">120</span> min</label><input type="range" id="lvDur" min="30" max="240" step="15" value="120"></div>
+        <div class="field"><label class="label" for="lvLang">Language</label><select id="lvLang"></select></div>
+      </div>
+      <p class="muted" id="lvLoc" style="margin-top:10px;font-size:12px"></p>
+    </div>
+    <div class="notice warn" id="lvMsg" hidden></div>
+    <div id="lvOut"></div>
+  </section>
+
+  <section class="panel" id="p-sup" role="tabpanel" aria-labelledby="tab-sup" hidden>
+    <div class="notice">Supervisors see conditions and crew totals. They never see a named worker's temperature, heart rate or alert history. Groups smaller than 5 are hidden and counts are rounded to the nearest 10%.</div>
+    <div class="kpis" id="supKpis"></div>
+    <div class="gridS">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <h3>Crew now</h3>
+          <div class="field" style="min-width:150px"><label class="label" for="crewN">Crew size shown</label>
+            <select id="crewN"><option value="12">12 workers</option><option value="8">8 workers</option><option value="5">5 workers</option><option value="4">4 workers</option><option value="3">3 workers</option></select></div>
+        </div>
+        <div id="crewNow"></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:10px">Standard site-wide rule compared</h3>
+        <div id="compare"></div>
+      </div>
+    </div>
+    <div class="card chart">
+      <h3 style="margin-bottom:4px">Crew heat strain through the shift</h3>
+      <p class="muted" style="margin-bottom:10px">Share of the crew at each alert level, every 6 minutes up to the selected time.</p>
+      <div id="crewChart"></div>
+      <div class="stack-l" id="crewLegend"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:4px">Plan the next work block</h3>
+      <p class="muted" style="margin-bottom:10px">Tests candidate work and rest cycles against every crew member's twin with randomised uncertainty. It picks the schedule that keeps the most work in while holding the chance of passing 38.5 °C to 5% or less.</p>
+      <div class="inline-ctl" style="margin-bottom:12px">
+        <label class="label" for="task">Planned task</label>
+        <select id="task"><option value="light">Light work</option><option value="moderate" selected>Moderate work</option><option value="heavy">Heavy work</option></select>
+        <button class="btn primary" id="plan" type="button">Recommend rotation</button>
+      </div>
+      <div id="planOut"><p class="muted">Press the button to plan from the selected time.</p></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:4px">Emergency escalation</h3>
+      <p class="muted" style="margin-bottom:10px">An individual is identified only after a severe symptom report or an emergency-level alert. The release goes to the site medic, lasts 60 minutes and is logged.</p>
+      <button class="btn" id="emg" type="button">Show an example release</button>
+      <div id="emgOut" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-ev" role="tabpanel" aria-labelledby="tab-ev" hidden>
+    <div class="card" id="evIntro"></div>
+    <div class="card"><h3 style="margin-bottom:10px">Headline comparison on held-out simulated crews</h3><div class="tw" id="evPooled"></div><p class="muted" id="evPooledNote" style="margin-top:10px"></p></div>
+    <div class="two">
+      <div class="card"><h3 style="margin-bottom:10px">By weather</h3><div class="tw" id="evCond"></div></div>
+      <div class="card"><h3 style="margin-bottom:10px">When sensors and networks fail</h3><div class="tw" id="evScen"></div><p class="muted" style="margin-top:10px">Pooled over the hot and dry and extreme heat days.</p></div>
+    </div>
+    <div class="card"><h3 style="margin-bottom:10px">Rotation planner checked against hidden truth</h3><div class="tw" id="evRot"></div></div>
+    <div class="two">
+      <div class="card"><h3 style="margin-bottom:10px">What this shows</h3><ul class="clean" id="evFind"></ul></div>
+      <div class="card"><h3 style="margin-bottom:10px">Limits you should know about</h3><ul class="clean" id="evLim"></ul></div>
+    </div>
+    <div class="card"><h3 style="margin-bottom:10px">How the model works</h3><div id="evModel"></div></div>
+  </section>
+
+  <section class="panel" id="p-gov" role="tabpanel" aria-labelledby="tab-gov" hidden>
+    <div class="two">
+      <div class="card"><h3 style="margin-bottom:8px">Allowed uses</h3><ul class="clean yes" id="govYes"></ul></div>
+      <div class="card"><h3 style="margin-bottom:8px">Prohibited uses</h3><ul class="clean no" id="govNo"></ul></div>
+    </div>
+    <div class="card"><h3 style="margin-bottom:10px">Who can see what</h3><div class="tw" id="govMap"></div>
+      <p class="muted" style="margin-top:10px">Retention and access rules are design commitments for a pilot. This prototype runs entirely in your browser and stores nothing.</p></div>
+    <div class="card"><h3 style="margin-bottom:8px">Consent in this demo</h3><p id="govConsent"></p></div>
+  </section>
+</div>
+
+<script>/* HeatTwin engine: heat-strain digital twin for outdoor / industrial crews.
+ * Pure JS, runs in Node (evaluation) and in the browser (demo app).
+ * SIMULATION-GRADE: assumptions are labelled; not clinically validated. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.HeatTwin = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  // ---------- seeded RNG ----------
+  function rng(seed) {
+    let a = seed >>> 0;
+    const f = function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    f.normal = () => {
+      let u = 0, v = 0;
+      while (u === 0) u = f();
+      v = f();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    return f;
+  }
+
+  // ---------- constants ----------
+  const METAB = { rest: 115, light: 180, moderate: 300, heavy: 415, vheavy: 520 }; // W, whole body (ISO 8996 / NIOSH classes)
+  const PPE = {
+    cotton: { caf: 0, label: 'Light cotton coverall' },
+    double: { caf: 3, label: 'Double-layer or heavy coverall' },
+    imperm: { caf: 10, label: 'Vapour-barrier suit' }
+  }; // clothing adjustment factors in WBGT degC, from ACGIH/NIOSH practice
+  const LEVELS = ['GREEN', 'YELLOW', 'ORANGE', 'RED', 'EMERGENCY'];
+
+  const DEFAULTS = {
+    s1: 0.08, s2: 0.004,            // core-temperature equilibrium slope vs WBGT excess (degC per degC, quadratic term above limit)
+    tauUp: 35, tauCool: 28,         // minutes
+    tauRestShade: 20, tauRestVest: 12,
+    hydroCoef: 0.12,                // degC per % body-mass water deficit
+    sweatBase: 0.25, sweatSlope: 0.55, // sweat loss estimate, L/h
+    drinkWork: 0.45, drinkRest: 0.9,   // assumed intake, L/h
+    hrGain: 12, kFuse: 0.05, hrCalMin: 20, hrClamp: 0.6,
+    indAge: 1.0, indBmi: 1.0,       // WBGT-limit reductions for age>=50, BMI>=30 (heuristic)
+    margin: [0.10, 0.20, 0.35, 0.50],
+    thrY: 37.9, thrO: 38.3, thrR: 38.7, tcLimit: 38.5, tcEmerg: 39.0
+  };
+
+  // ---------- psychrometrics and WBGT ----------
+  function satVP(T) { return 0.6108 * Math.exp(17.27 * T / (T + 237.3)); } // kPa
+  function wetBulb(T, RH) { // Stull (2011)
+    RH = clamp(RH, 5, 100);
+    return T * Math.atan(0.151977 * Math.sqrt(RH + 8.313659)) + Math.atan(T + RH) - Math.atan(RH - 1.676331) +
+      0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
+  }
+  // Simplified outdoor WBGT. Not Liljegren; documented approximation.
+  function wbgtSun(e) {
+    const w = Math.max(e.wind == null ? 1.5 : e.wind, 1.5);
+    const tw = wetBulb(e.ta, e.rh);
+    const tnwb = tw + 0.003 * e.solar / Math.sqrt(w);
+    const tg = e.ta + 0.026 * e.solar / Math.sqrt(w);
+    return 0.7 * tnwb + 0.2 * tg + 0.1 * e.ta;
+  }
+  function wbgtShade(e) { return 0.7 * wetBulb(e.ta, e.rh) + 0.3 * e.ta; }
+
+  // NIOSH (2016) limits, M in watts. Unacclimatised: Recommended Alert Limit. Acclimatised: Recommended Exposure Limit.
+  function limitWBGT(M, acc) {
+    const ral = 59.9 - 14.1 * Math.log10(M);
+    const rel = 56.7 - 11.5 * Math.log10(M);
+    return ral + clamp(acc, 0, 1) * (rel - ral);
+  }
+  function indMod(prof, p) {
+    return (prof.age >= 50 ? p.indAge : 0) + (prof.bmi >= 30 ? p.indBmi : 0);
+  }
+
+  // ---------- core dynamics (shared by twin, predictor, optimiser) ----------
+  function advance(st, a, p) {
+    // st: {tc, d}; a: {M, wbgtEff, mode:'work'|'rest', cooling:'shade'|'vest'|'ac', lim, mass, drink}
+    const excess = a.wbgtEff - a.lim;
+    let eq = 38.0 + p.s1 * excess + (excess > 0 ? p.s2 * excess * excess : 0) + p.hydroCoef * st.d;
+    const floor = 36.9 + 0.0012 * (a.M - 115);
+    if (eq < floor) eq = floor;
+    if (eq > 40.8) eq = 40.8; // physiological ceiling for the model; beyond this the person would already be an emergency
+    let tau;
+    if (a.mode === 'rest') tau = a.cooling === 'shade' ? p.tauRestShade : p.tauRestVest;
+    else tau = eq >= st.tc ? p.tauUp : p.tauCool;
+    const tc = st.tc + (eq - st.tc) * (1 - Math.exp(-1 / tau));
+    const sweat = p.sweatBase + (a.M / 300) * p.sweatSlope * clamp(0.4 + (a.wbgtEff - 20) / 18, 0.2, 1.6);
+    const dd = ((sweat - a.drink) / 60) / a.mass * 100;
+    return { tc, d: clamp(st.d + dd, 0, 6) };
+  }
+
+  function hrExpected(M) { return 62 + 0.2 * (M - 115); }
+
+  // ---------- worker twin ----------
+  class WorkerTwin {
+    constructor(profile, params) {
+      this.p = Object.assign({}, DEFAULTS, params || {});
+      this.prof = Object.assign({ mass: 75, age: 35, bmi: 25, acc: 1, ppe: 'cotton', d0: 0.5 }, profile);
+      this.tc = 37.0; this.d = this.prof.d0;
+      this.minute = 0; this.lastEnv = null; this.lastEnvMin = -1e9;
+      this.calN = 0; this.calSum = 0; this.hrBias = null;
+      this.ladder = 1; this.tcEq = 37; this.lastWbgt = 28;
+    }
+    snapshot() { return { tc: this.tc, d: this.d }; }
+    // ctx: {env|null, activity, cooling, hr|null, drink (optional multiplier)}
+    step(ctx) {
+      const p = this.p, prof = this.prof;
+      this.minute++;
+      if (ctx.env) { this.lastEnv = ctx.env; this.lastEnvMin = this.minute; }
+      const age = this.minute - this.lastEnvMin;
+      const hasHr = ctx.hr != null;
+      const fresh = this.lastEnv && age <= 15;
+      let wsun, wshade, L;
+      if (fresh) { L = hasHr ? 0 : 1; }
+      else if (this.lastEnv && age <= 180) { L = 2; }
+      else { L = 3; }
+      this.ladder = L;
+      const caf = PPE[prof.ppe].caf;
+      if (L <= 2) {
+        const bump = L === 2 ? Math.min(2.0, 0.015 * age) + 1.0 : 0;
+        wsun = wbgtSun(this.lastEnv) + bump; wshade = wbgtShade(this.lastEnv) + bump;
+      } else { wsun = 33; wshade = 30; } // no data: conservative default
+      this.lastWbgt = wsun;
+      const act = ctx.activity;
+      const mode = act === 'rest' ? 'rest' : 'work';
+      const cooling = ctx.cooling || 'shade';
+      const M = METAB[act];
+      let wEff;
+      if (mode === 'work') wEff = wsun + caf;
+      else if (cooling === 'ac') wEff = 24;
+      else if (cooling === 'vest') wEff = wshade + 0.5 * caf - 3;
+      else wEff = wshade + 0.5 * caf;
+      const acc = prof.acc;
+      const lim = limitWBGT(M, acc) - indMod(prof, p);
+      const drink = (mode === 'rest' ? p.drinkRest : p.drinkWork) * (ctx.drink || 1);
+      const nxt = advance({ tc: this.tc, d: this.d }, { M, wbgtEff: wEff, mode, cooling, lim, mass: prof.mass, drink }, p);
+      this.tc = nxt.tc; this.d = nxt.d;
+      // wearable fusion (heart rate residual, self-calibrating baseline)
+      if (hasHr && ctx.hr > 40 && ctx.hr < 210) {
+        const r = ctx.hr - hrExpected(M);
+        if (this.minute <= p.hrCalMin * 2 && this.tc < 37.6 && this.calN < p.hrCalMin) { this.calN++; this.calSum += r; }
+        if (this.calN >= 8) {
+          const b = this.calSum / this.calN;
+          const obs = 37.2 + (r - b) / p.hrGain;
+          const innov = clamp(obs - this.tc, -p.hrClamp, p.hrClamp);
+          if (this.minute > p.hrCalMin) this.tc += p.kFuse * innov;
+        }
+      }
+      return this.state();
+    }
+    // Predict core temp if the worker keeps doing `activity` for h minutes.
+    predict(activity, h, trend, marg) {
+      marg = marg || 0;
+      const p = this.p, prof = this.prof;
+      const e = this.lastEnv || { ta: 38, rh: 40, solar: 800, wind: 2 };
+      const age = this.minute - this.lastEnvMin;
+      const bump = this.ladder === 2 ? Math.min(2.0, 0.015 * age) + 1.0 : 0;
+      let w0 = this.ladder === 3 ? 33 : wbgtSun(e) + bump;
+      const caf = PPE[prof.ppe].caf, M = METAB[activity];
+      const lim = limitWBGT(M, prof.acc) - indMod(prof, p);
+      const tr = clamp(trend || 0, -0.02, 0.05);
+      let st = { tc: this.tc, d: this.d }, mx = st.tc, end = st.tc, tCross = this.tc + marg >= 38.5 ? 0 : null;
+      const HZ = Math.max(h, 60);
+      for (let i = 0; i < HZ; i++) {
+        const wEff = (w0 + tr * i) + caf;
+        st = advance(st, { M, wbgtEff: wEff, mode: 'work', cooling: 'shade', lim, mass: prof.mass, drink: p.drinkWork }, p);
+        if (i < h && st.tc > mx) mx = st.tc;
+        if (i === h - 1) end = st.tc;
+        if (tCross === null && st.tc + marg >= 38.5) tCross = i + 1;
+      }
+      return { end, max: mx, tCross };
+    }
+    state() { return { tc: this.tc, d: this.d, ladder: this.ladder, wbgt: this.lastWbgt }; }
+  }
+
+  // ---------- alerts ----------
+  function severity(tcHat, tcPredMax, ladder, symptom, p) {
+    p = p || DEFAULTS;
+    if (symptom === 'severe' || tcHat >= p.tcEmerg) return 4;
+    const eff = tcPredMax + p.margin[ladder];
+    let lv = 0;
+    if (eff >= p.thrR || tcHat >= p.tcLimit) lv = 3;
+    else if (eff >= p.thrO || tcHat >= 38.2) lv = 2;
+    else if (eff >= p.thrY) lv = 1;
+    if (symptom === 'mild') lv = Math.max(lv, 2);
+    return lv;
+  }
+
+  const ACTIONS = {
+    en: { 0: 'Normal: keep drinking water regularly.', 1: 'Caution: drink 250 ml now, rest briefly in shade, and check on your buddy.', 2: 'Warning: stop heavy work, rest 15 minutes in shade or a cool place, and drink water.', 3: 'Danger: stop work now, go somewhere cool and cool your body. Tell your supervisor. Do not restart without clearance.', 4: 'Emergency: call an ambulance now and cool the person with wet cloths or cold water. Do not give drinks if they are confused or unconscious.' },
+    hi: { 0: 'सामान्य: नियमित रूप से पानी पीते रहें।', 1: 'सावधान: अभी 250 मिली पानी पिएं, छाया में थोड़ा आराम करें और अपने साथी पर नज़र रखें।', 2: 'चेतावनी: भारी काम रोकें, 15 मिनट छाया या ठंडी जगह में आराम करें और पानी पिएं।', 3: 'खतरा: काम तुरंत रोकें, ठंडी जगह जाएं और शरीर को ठंडा करें। सुपरवाइज़र को बताएं। अनुमति के बिना दोबारा काम शुरू न करें।', 4: 'आपातकाल: तुरंत एम्बुलेंस बुलाएं और व्यक्ति को गीले कपड़े या ठंडे पानी से ठंडा करें। बेहोश या भ्रमित हो तो पानी न पिलाएं।' },
+    ar: { 0: 'طبيعي: واصل شرب الماء بانتظام.', 1: 'تنبيه: اشرب 250 مل من الماء الآن، وخذ استراحة قصيرة في الظل، وراقب زميلك.', 2: 'تحذير: أوقف الأعمال الشاقة، واسترح 15 دقيقة في الظل أو مكان بارد، واشرب الماء.', 3: 'خطر: أوقف العمل فورًا وانتقل إلى مكان بارد وبرّد جسمك. أبلغ المشرف. لا تستأنف العمل دون إذن.', 4: 'طوارئ: اتصل بالإسعاف فورًا وبرّد الشخص بقماش مبلل أو ماء بارد. لا تعطه شرابًا إذا كان مشوشًا أو فاقد الوعي.' },
+    ur: { 0: 'معمول: باقاعدگی سے پانی پیتے رہیں۔', 1: 'احتیاط: ابھی 250 ملی لیٹر پانی پئیں، سائے میں تھوڑا آرام کریں اور اپنے ساتھی کا خیال رکھیں۔', 2: 'انتباہ: بھاری کام روکیں، 15 منٹ سائے یا ٹھنڈی جگہ میں آرام کریں اور پانی پئیں۔', 3: 'خطرہ: کام فوراً روکیں، ٹھنڈی جگہ جائیں اور جسم کو ٹھنڈا کریں۔ سپروائزر کو بتائیں۔ اجازت کے بغیر دوبارہ کام شروع نہ کریں۔', 4: 'ایمرجنسی: فوراً ایمبولینس بلائیں اور شخص کو گیلے کپڑے یا ٹھنڈے پانی سے ٹھنڈا کریں۔ بے ہوش یا الجھن میں ہو تو پانی نہ پلائیں۔' },
+    bn: { 0: 'স্বাভাবিক: নিয়মিত পানি পান করুন।', 1: 'সতর্কতা: এখনই ২৫০ মিলি পানি পান করুন, ছায়ায় একটু বিশ্রাম নিন এবং সহকর্মীর খেয়াল রাখুন।', 2: 'সতর্কবার্তা: ভারী কাজ বন্ধ করুন, ১৫ মিনিট ছায়া বা ঠান্ডা জায়গায় বিশ্রাম নিন এবং পানি পান করুন।', 3: 'বিপদ: এখনই কাজ বন্ধ করুন, ঠান্ডা জায়গায় যান ও শরীর ঠান্ডা করুন। সুপারভাইজারকে জানান। অনুমতি ছাড়া আবার কাজ শুরু করবেন না।', 4: 'জরুরি: এখনই অ্যাম্বুলেন্স ডাকুন এবং ভেজা কাপড় বা ঠান্ডা পানিতে ব্যক্তিকে ঠান্ডা করুন। অজ্ঞান বা বিভ্রান্ত হলে পানি খাওয়াবেন না।' },
+    tl: { 0: 'Normal: Patuloy na uminom ng tubig.', 1: 'Mag-ingat: Uminom ng 250 ml ngayon, magpahinga sandali sa lilim, at bantayan ang katrabaho.', 2: 'Babala: Itigil ang mabigat na trabaho, magpahinga ng 15 minuto sa lilim o malamig na lugar, at uminom ng tubig.', 3: 'Panganib: Itigil agad ang trabaho, pumunta sa malamig na lugar at palamigin ang katawan. Sabihan ang supervisor. Huwag bumalik sa trabaho nang walang pahintulot.', 4: 'Emergency: Tumawag agad ng ambulansya at palamigin ang tao gamit ang basang tela o malamig na tubig. Huwag painumin kung litong-lito o walang malay.' }
+  };
+  const LANGS = { en: 'English', hi: 'हिन्दी', ar: 'العربية', ur: 'اردو', bn: 'বাংলা', tl: 'Tagalog' };
+
+  // ---------- crew view with privacy rules ----------
+  // states: [{level}], siteLevel from environment only. Individuals are never exposed here.
+  function crewView(states, siteLevel, k) {
+    k = k || 5;
+    const n = states.length;
+    if (n < k) return { n, suppressed: true, siteLevel, note: 'Crew smaller than ' + k + ': only site-level conditions are shown.' };
+    const cnt = [0, 0, 0, 0, 0];
+    states.forEach(s => cnt[s.level]++);
+    const share = cnt.map(c => Math.round((c / n) * 10) * 10); // nearest 10%
+    const hot = (cnt[2] + cnt[3] + cnt[4]) / n;
+    let crewLevel = 0;
+    if (cnt[4] > 0) crewLevel = 4;
+    else if (hot >= 0.3 || cnt[3] / n >= 0.15) crewLevel = 3;
+    else if (hot >= 0.15 || (cnt[1] + hot * n) / n >= 0.4) crewLevel = 2;
+    else if ((cnt[1] + cnt[2]) / n >= 0.15) crewLevel = 1;
+    return { n, suppressed: false, share, crewLevel, siteLevel, needCheck: Math.round(hot * 10) * 10 };
+  }
+
+  function siteLevelFromEnv(env, task, crewAcc, ppe, offs) {
+    offs = offs || [-3, 0, 3];
+    const w = wbgtSun(env) + PPE[ppe].caf;
+    const ex = w - limitWBGT(METAB[task], crewAcc);
+    return ex <= offs[0] ? 0 : ex <= offs[1] ? 1 : ex <= offs[2] ? 2 : 3;
+  }
+
+  // ---------- rotation optimiser ----------
+  // twins: array of WorkerTwin (snapshots used), envAt(minute)->env, task name, horizon minutes.
+  function optimizeRotation(twins, task, envAt, opts) {
+    opts = opts || {};
+    const H = opts.horizon || 180, K = opts.samples || 10, seed = opts.seed || 7;
+    const works = opts.works || [20, 30, 40, 50, 60], rests = opts.rests || [10, 15, 20, 30], modes = opts.modes || ['shade', 'vest'];
+    const target = opts.target == null ? 0.05 : opts.target;
+    const r = rng(seed);
+    // pre-draw jitter (common random numbers across candidates)
+    const jit = [];
+    for (let j = 0; j < K; j++) jit.push({ s1: 1 + 0.15 * r.normal(), off: 0.15 * r.normal(), hyd: 1 + 0.2 * r.normal() });
+    const envs = []; for (let i = 0; i < H; i++) envs.push(envAt(i));
+    const cands = [{ work: H, rest: 0, mode: 'shade', label: 'No planned breaks' }];
+    works.forEach(w => rests.forEach(rs => modes.forEach(m => cands.push({ work: w, rest: rs, mode: m }))));
+    const M = METAB[task], res = [];
+    cands.forEach(c => {
+      let exceed = 0, exceed39 = 0, total = 0, workMin = 0;
+      twins.forEach(tw => {
+        const p0 = tw.p, prof = tw.prof, caf = PPE[prof.ppe].caf;
+        const limW = limitWBGT(M, prof.acc) - indMod(prof, p0), limR = limitWBGT(METAB.rest, prof.acc) - indMod(prof, p0);
+        jit.forEach(j => {
+          const p = Object.assign({}, p0, { s1: p0.s1 * j.s1, hydroCoef: p0.hydroCoef * j.hyd });
+          let st = { tc: tw.tc + j.off, d: tw.d }, mx = st.tc, t = 0, phase = 'work', left = c.work, wm = 0;
+          for (let i = 0; i < H; i++) {
+            const e = envs[i];
+            if (phase === 'work') {
+              st = advance(st, { M, wbgtEff: wbgtSun(e) + caf, mode: 'work', cooling: 'shade', lim: limW, mass: prof.mass, drink: p.drinkWork }, p); wm++;
+            } else {
+              const we = c.mode === 'vest' ? wbgtShade(e) + 0.5 * caf - 3 : wbgtShade(e) + 0.5 * caf;
+              st = advance(st, { M: METAB.rest, wbgtEff: we, mode: 'rest', cooling: c.mode, lim: limR, mass: prof.mass, drink: p.drinkRest }, p);
+            }
+            if (st.tc > mx) mx = st.tc;
+            if (--left <= 0) { if (c.rest > 0) { phase = phase === 'work' ? 'rest' : 'work'; left = phase === 'work' ? c.work : c.rest; } else left = 1e9; }
+          }
+          total++; workMin += wm;
+          if (mx >= 38.5) exceed++;
+          if (mx >= 39.0) exceed39++;
+        });
+      });
+      res.push({ work: c.work, rest: c.rest, mode: c.mode, label: c.label, risk: exceed / total, risk39: exceed39 / total, productivity: workMin / total / H });
+    });
+    const safe = res.filter(x => x.risk <= target && x.risk39 === 0);
+    safe.sort((a, b) => b.productivity - a.productivity || a.risk - b.risk);
+    const best = safe[0] || res.slice().sort((a, b) => a.risk - b.risk || b.productivity - a.productivity)[0];
+    const noBreaks = res[0];
+    const frontier = res.slice().sort((a, b) => a.risk - b.risk || b.productivity - a.productivity);
+    return { best, bestMeetsTarget: !!safe[0], noBreaks, all: res, target, frontier: frontier.slice(0, 8) };
+  }
+
+  const DATA_USE = {
+    allowed: ['Estimate this worker\'s heat risk and send alerts to this worker', 'Show crew-level counts to supervisors (groups of 5 or more, rounded)', 'Improve breaks, shade and rotation at site level', 'Emergency escalation after a severe alert, logged and time-limited'],
+    prohibited: ['Discipline, pay, ranking or performance review', 'Hiring, firing, contract renewal or visa decisions', 'Sharing with employers, agents or insurers in identifiable form', 'Any use unrelated to heat safety']
+  };
+
+  return { rng, clamp, METAB, PPE, LEVELS, DEFAULTS, satVP, wetBulb, wbgtSun, wbgtShade, limitWBGT, indMod, advance, hrExpected, WorkerTwin, severity, ACTIONS, LANGS, crewView, siteLevelFromEnv, optimizeRotation, DATA_USE };
+});
+</script>
+<script>/* Field-day simulator + evaluation harness for HeatTwin.
+ * Ground truth uses HIDDEN per-worker physiology with different constants and functional form from the twin
+ * (model mismatch), plus sensor noise, connectivity outages, battery and dust dropouts.
+ * All results are SIMULATED. They show relative behaviour of alert strategies, not clinical accuracy. */
+const H = (typeof require === 'function' && typeof module === 'object') ? require('./engine.js') : window.HeatTwin;
+const { METAB, PPE, clamp } = H;
+
+const CONDITIONS = {
+  mild:   { label: 'Mild day',          tmax: 31, tmin: 22, rhMin: 40, rhMax: 75, solar: 800, dust: 1.0 },
+  humid:  { label: 'Hot and humid',     tmax: 38, tmin: 30, rhMin: 45, rhMax: 80, solar: 700, dust: 1.0 },
+  dry:    { label: 'Hot and dry',       tmax: 41, tmin: 28, rhMin: 15, rhMax: 45, solar: 950, dust: 0.9 },
+  extreme:{ label: 'Extreme heat wave', tmax: 46, tmin: 32, rhMin: 12, rhMax: 35, solar: 950, dust: 0.85 }
+};
+const CREWS = {
+  construction: { tasks: [['heavy', .30], ['moderate', .50], ['light', .20]], ppe: [['cotton', .7], ['double', .3]] },
+  logistics:    { tasks: [['heavy', .10], ['moderate', .60], ['light', .30]], ppe: [['cotton', 1]] },
+  industrial:   { tasks: [['moderate', .60], ['light', .40]],                 ppe: [['cotton', .4], ['double', .5], ['imperm', .1]] }
+};
+const SHIFT = 480;                         // 07:00-15:00
+const SCHEDULED = [[150, 165], [300, 345], [420, 435]]; // tea break, lunch, afternoon break (shade)
+const isScheduledRest = m => SCHEDULED.some(([a, b]) => m >= a && m < b);
+
+function pick(r, arr) { let u = r(), c = 0; for (const [v, p] of arr) { c += p; if (u <= c) return v; } return arr[arr.length - 1][0]; }
+
+function envTrue(cond, rg, m) {
+  const clock = 7 + m / 60;
+  const ta = cond.tmax - (cond.tmax - cond.tmin) * (1 - Math.cos(2 * Math.PI * (clock - 15) / 24)) / 2;
+  const f = clamp((ta - cond.tmin) / (cond.tmax - cond.tmin), 0, 1);
+  const rh = cond.rhMax - (cond.rhMax - cond.rhMin) * f;
+  const sun = Math.max(0, Math.sin(Math.PI * (clock - 6) / 12));
+  return { ta, rh, solar: cond.solar * sun * cond.dust, wind: 2 };
+}
+
+// Day-level weather: shared across workers (site weather), with a cloud/dust factor and forecast error.
+function makeDay(cond, seed) {
+  const r = H.rng(seed);
+  const dt = 0.9 * r.normal();                          // actual day differs from nominal by this many degC
+  const cloud = []; let c = 1;
+  for (let m = 0; m < SHIFT; m++) { c = clamp(0.98 * c + 0.02 * 1 + 0.06 * r.normal(), 0.5, 1.05); cloud.push(c); }
+  const env = [];
+  for (let m = 0; m < SHIFT; m++) { const e = envTrue(cond, r, m); e.ta += dt; e.solar *= cloud[m]; env.push(e); }
+  return env;
+}
+
+function makeWorker(crewName, seed) {
+  const r = H.rng(seed), crew = CREWS[crewName];
+  const acc = pick(r, [[1, .5], [.7, .2], [.3, .3]]);
+  const age = Math.round(20 + 38 * r()), bmi = clamp(26 + 4 * r.normal(), 18, 40), mass = clamp(72 + 10 * r.normal(), 50, 120);
+  const ppe = pick(r, crew.ppe);
+  // task blocks of 60-120 min
+  const sched = []; let m = 0;
+  while (m < SHIFT) { const t = pick(r, crew.tasks), len = 60 + Math.floor(60 * r()); for (let i = 0; i < len && m < SHIFT; i++, m++) sched.push(t); }
+  const profile = { mass, age, bmi, acc, ppe, d0: 0.5 };
+  const hidden = {
+    accTrue: clamp(acc + 0.15 * r.normal(), 0, 1),
+    mMult: 1 + 0.12 * r.normal(),
+    micro: 1.0 * r.normal(),                 // local microclimate offset in WBGT
+    ppeErr: 1.0 * r.normal(),
+    s1: 0.085 * (1 + 0.25 * r.normal()), s2: 0.0045, tauUp: 30 + 6 * r.normal(), tauCool: 25 + 5 * r.normal(),
+    susc: r() < 0.08 ? 0.35 : 0,             // hidden extra susceptibility (illness, medication)
+    d0: clamp(0.3 + 0.6 * Math.abs(r.normal()), 0, 2.2),
+    drinkMult: clamp(1 + 0.25 * r.normal(), 0.4, 1.6),
+    hrBase: 6 * r.normal(), hrPerC: clamp(11 + 3 * r.normal(), 5, 18),
+    batteryDies: r() < 0.25 ? 300 + Math.floor(150 * r()) : null,
+    noWearable: r() < 0.10,                  // worker declined or device failed
+    seed: Math.floor(r() * 1e9)
+  };
+  return { profile, hidden, sched };
+}
+
+function truthStep(w, st, activity, cooling, e, drinkBoost) {
+  const h = w.hidden, prof = w.profile;
+  const M = METAB[activity] * h.mMult;
+  const wsun = H.wbgtSun(e) + h.micro, wsh = H.wbgtShade(e) + 0.5 * h.micro;
+  const caf = Math.max(0, PPE[prof.ppe].caf + h.ppeErr * (PPE[prof.ppe].caf > 0 ? 1 : 0));
+  const rest = activity === 'rest';
+  const wEff = rest ? (cooling === 'ac' ? 24 : cooling === 'vest' ? wsh + 0.5 * caf - 3.5 : wsh + 0.5 * caf) : wsun + caf;
+  const lim = H.limitWBGT(M, h.accTrue) - H.indMod(prof, H.DEFAULTS) - h.susc * 10; // susc shifts the limit by up to 3.5 degC
+  const ex = wEff - lim;
+  let eq = 37.9 + h.s1 * ex + (ex > 0 ? h.s2 * ex * ex : 0) + 0.10 * st.d;
+  eq = clamp(eq, 36.8 + 0.0012 * (M - 115), 41.2);
+  const tau = rest ? (cooling === 'shade' ? 22 : 13) : (eq >= st.tc ? h.tauUp : h.tauCool);
+  const tc = st.tc + (eq - st.tc) * (1 - Math.exp(-1 / tau));
+  const sweat = 0.2 + (M / 300) * 0.6 * clamp(0.4 + (wEff - 20) / 18, 0.2, 1.7);
+  const drink = (rest ? 0.8 : 0.4) * h.drinkMult * (drinkBoost || 1);
+  const d = clamp(st.d + ((sweat - drink) / 60) / prof.mass * 100, 0, 6);
+  return { tc, d };
+}
+function truthHR(w, tc, activity, r) {
+  const M = METAB[activity];
+  return 62 + 0.2 * (M - 115) + w.hidden.hrBase + w.hidden.hrPerC * (tc - 37.2) + 4 * r.normal();
+}
+
+// ---------- alert systems ----------
+// scenario: { wearable: bool, outage: [[a,b],...] feed lost, noEnvAtAll: bool }
+function makeSystem(kind, w, scen) {
+  if (kind === 'status') return { kind };
+  if (kind === 'threshold') return { kind };
+  const params = {};
+  const tw = new H.WorkerTwin(w.profile, scen.twinParams || params);
+  return { kind, tw };
+}
+
+function runDay(w, env, kind, scen, respond, seed) {
+  const r = H.rng(seed ^ w.hidden.seed);
+  const sensor = H.rng((seed * 31 + 7) ^ w.hidden.seed);
+  const sys = makeSystem(kind, w, scen);
+  const useHr = kind === 'twin_hr' && scen.wearable !== false && !w.hidden.noWearable;
+  let st = { tc: 37.0, d: w.hidden.d0 };
+  let override = null;            // {until, activity, cooling, minRest, kind:'rest'|'reduce'}
+  let boostUntil = -1;
+  let lastRestEnd = -1e9, lastL2 = -1e9, lastL3 = -1e9;
+  const log = { minTc: [], est: [], dh: [], ttl: [], ladder: [], act: [], pred: [], hrOn: [], levels: [], onsets: [], rests: 0, restMin: 0, reduceMin: 0, emergencies: 0, symptoms: 0, peak: 0, min385: 0, min39: 0, workMin: 0 };
+  let prevLevel = 0, sustain = 0, lastOnset = -1e9, quiet = 99, below = 0;
+  const wb = []; // wbgt history for trend
+  let lastMeasured = null;
+  let symptom = null;
+  const siteCrewAcc = 0.7;
+  for (let m = 0; m < SHIFT; m++) {
+    const e = env[m];
+    // planned activity
+    let planned = w.sched[m], activity = planned, cooling = 'shade';
+    if (scen.rotation) { const c = scen.rotation, cyc = c.work + c.rest; if (c.rest > 0 && (m % cyc) >= c.work) { activity = 'rest'; cooling = c.mode; } }
+    else if (isScheduledRest(m)) { activity = 'rest'; cooling = 'shade'; }
+    if (override && m < override.until) {
+      if (override.kind === 'rest') { activity = 'rest'; cooling = override.cooling; }
+      else if (override.kind === 'reduce' && activity !== 'rest') {
+        activity = planned === 'heavy' ? 'moderate' : planned === 'moderate' ? 'light' : 'light';
+      }
+    }
+    // truth
+    const drinkBoost = m < boostUntil ? 1.35 : 1;
+    st = truthStep(w, st, activity, cooling, e, drinkBoost);
+    if (st.tc >= 38.5) log.min385++;
+    if (st.tc >= 39.0) log.min39++;
+    if (st.tc > log.peak) log.peak = st.tc;
+    if (activity === 'rest') {
+      if (override && override.kind === 'rest' && m < override.until) log.restMin++;
+    } else if (override && override.kind === 'reduce' && m < override.until) log.reduceMin += 0.5;
+    if (activity !== 'rest') log.workMin++;
+    // measurements
+    const outage = scen.outage && scen.outage.some(([a, b]) => m >= a && m < b);
+    const feedUp = !outage && !scen.noEnvAtAll;
+    let envMeas = null;
+    if (feedUp) envMeas = { ta: e.ta + 0.5 * sensor.normal(), rh: clamp(e.rh + 4 * sensor.normal(), 5, 100), solar: Math.max(0, e.solar * (1 + 0.08 * sensor.normal())), wind: e.wind };
+    let hr = null;
+    const dropout = (w.hidden.batteryDies != null && m >= w.hidden.batteryDies) || ((m % 240) > 200 && sensor() < 0.35) || sensor() < 0.04;
+    if (useHr && !dropout) hr = truthHR(w, st.tc, activity, sensor);
+    // symptom self-report (twin variants only: the worker app has a symptom button)
+    let sym = null;
+    if (kind !== 'status' && kind !== 'threshold') {
+      if (st.tc >= 39.2 && sensor() < 0.05) sym = 'severe';
+      else if (st.tc >= 38.7 && sensor() < 0.03) sym = 'mild';
+    }
+    // alert level
+    let level = 0;
+    if (kind === 'threshold') {
+      if (envMeas) lastMeasured = envMeas;
+      if (lastMeasured) {
+        // standard practice: site-wide level from the crew's nominal task and acclimatisation, last known reading is kept
+        level = H.siteLevelFromEnv(lastMeasured, 'moderate', siteCrewAcc, 'cotton', scen.thrOffsets);
+      } else level = 2; // no data: standard practice assumes caution
+    } else if (kind !== 'status') {
+      const tw = sys.tw;
+      // The planned task for prediction is the next work task
+      const nextTask = planned;
+      tw.step({ env: envMeas, activity, cooling, hr });
+      wb.push(tw.lastWbgt); if (wb.length > 25) wb.shift();
+      const trend = wb.length >= 20 ? (wb[wb.length - 1] - wb[0]) / (wb.length - 1) : 0;
+      if (m % 2 === 0 || sym) {
+        const pr = tw.predict(nextTask, 30, trend, tw.p.margin[tw.ladder]);
+        level = H.severity(tw.tc, pr.max, tw.ladder, sym, tw.p);
+        symptom = sym;
+        sys.lastLevel = level; sys.lastPred = pr.max; sys.lastTtl = pr.tCross;
+      } else level = sys.lastLevel || 0;
+    }
+    log.levels.push(level);
+    log.est.push(sys.tw ? sys.tw.tc : null); log.dh.push(sys.tw ? sys.tw.d : null); log.ttl.push(sys.lastTtl === undefined ? null : sys.lastTtl); log.ladder.push(sys.tw ? sys.tw.ladder : null); log.act.push(activity); log.pred.push(sys.lastPred == null ? null : sys.lastPred); log.hrOn.push(hr != null ? 1 : 0);
+    // distinct alert: level >=2 sustained 2 min after >=20 min below 2 (same rule for every strategy); escalation to 3 counts once per 20 min
+    if (level >= 2) { sustain++; below = 0; } else { sustain = 0; below++; }
+    if (sustain === 2 && quiet >= 20) { log.onsets.push({ m: m - 1, level }); lastOnset = m; quiet = 0; }
+    else if (level >= 3 && prevLevel < 3 && sustain >= 2 && m - lastOnset >= 20) { log.onsets.push({ m, level, esc: true }); lastOnset = m; }
+    if (level >= 2) quiet = 0; else quiet++;
+    prevLevel = level;
+    log.minTc.push(st.tc);
+    // responses
+    if (respond && kind !== 'status') {
+      const busy = override && m < override.until;
+      if (level >= 1 && m >= boostUntil && sensor() < 0.8 && m - (log.lastBoost || -99) > 30) { boostUntil = m + 30; log.lastBoost = m; }
+      if (level === 4) {
+        if (!busy || override.kind !== 'rest' || override.cooling !== 'ac') { override = { kind: 'rest', until: m + 60, cooling: 'ac' }; log.emergencies++; log.rests++; }
+      } else if (level === 3 && !(busy && override.kind === 'rest') && m - lastL3 >= (scen.refr3 || 60) && sensor() < 0.85) {
+        override = { kind: 'rest', start: m, until: m + (scen.rest3 || 30), cooling: 'vest', ext: true }; lastL3 = m; log.rests++;
+      } else if (level === 2 && !busy && m - lastL2 >= (scen.refr2 || 45) && sensor() < 0.75) {
+        override = { kind: 'rest', start: m, until: m + (scen.rest2 || 15), cooling: 'shade', ext: true }; lastL2 = m; log.rests++;
+      }
+      // return-to-work: twin systems extend rest until level <=1 (cap 90 min); then 30 min reduced intensity
+      if (override && override.kind === 'rest' && m + 1 >= override.until && override.ext) {
+        if ((kind === 'twin_env' || kind === 'twin_hr') && level >= 2 && m + 1 - override.start < 90) override.until += 1;
+        else if (!override.reduced) { override = { kind: 'reduce', until: m + 1 + 30, cooling: 'shade' }; }
+      }
+    }
+    if (m === SHIFT - 1) log.endTc = st.tc;
+  }
+  return log;
+}
+
+function percentile(a, q) { if (!a.length) return NaN; const s = a.slice().sort((x, y) => x - y); const i = (s.length - 1) * q; const lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
+
+// Evaluate a system on a set of worker-days
+function evaluate(kind, cases, scen) {
+  const out = { n: cases.length, events: 0, detected: 0, leads: [], alerts: 0, trueAlerts: 0, falseAlerts: 0, minTcAbove385: 0, minTcAbove39: 0, workersAbove385: 0, workersAbove39: 0, emergencies: 0, lostMin: 0, workMin: 0, restMin: 0, symptoms: 0, rests: 0, peaks: [] };
+  const base = { work: 0 };
+  cases.forEach(cs => {
+    // observe-only pass: alert quality against the no-response truth
+    const ob = runDay(cs.w, cs.env, kind, scen, false, cs.seed);
+    const cross = ob.minTc.findIndex(t => t >= 38.5);
+    if (cross >= 0) {
+      out.events++;
+      let first = -1;
+      for (let k = Math.max(1, cross - 120); k <= cross; k++) if (ob.levels[k] >= 2 && ob.levels[k - 1] >= 2) { first = k - 1; break; }
+      if (first >= 0) { out.detected++; out.leads.push(cross - first); }
+    }
+    ob.onsets.forEach(o => {
+      out.alerts++;
+      const reach = ob.minTc.slice(o.m, o.m + 90).some(t => t >= 38.5);
+      if (reach) out.trueAlerts++; else out.falseAlerts++;
+    });
+    // response pass: outcomes
+    const rs = runDay(cs.w, cs.env, kind, scen, true, cs.seed);
+    out.minTcAbove385 += rs.min385; out.minTcAbove39 += rs.min39;
+    if (rs.min385 > 0) out.workersAbove385++;
+    if (rs.min39 > 0) out.workersAbove39++;
+    out.emergencies += rs.emergencies; out.restMin += rs.restMin; out.lostMin += rs.restMin + rs.reduceMin; out.workMin += rs.workMin;
+    out.rests += rs.rests; out.peaks.push(rs.peak);
+  });
+  return {
+    kind, n: out.n, events: out.events,
+    sensitivity: out.events ? out.detected / out.events : null,
+    leadMedian: percentile(out.leads, .5), leadP25: percentile(out.leads, .25),
+    alertsPerWorkerDay: out.alerts / out.n,
+    falseAlertRate: out.alerts ? out.falseAlerts / out.alerts : 0,
+    falseAlertsPerWorkerDay: out.falseAlerts / out.n,
+    pctWorkersAbove385: out.workersAbove385 / out.n, pctWorkersAbove39: out.workersAbove39 / out.n,
+    minAbove385PerWorker: out.minTcAbove385 / out.n,
+    emergenciesPer100: 100 * out.emergencies / out.n,
+    extraRestMinPerWorker: out.restMin / out.n, lostWorkMinPerWorker: out.lostMin / out.n,
+    peakP50: percentile(out.peaks, .5), peakP95: percentile(out.peaks, .95)
+  };
+}
+
+function buildCases(condKey, n, seed0) {
+  const cases = [], crews = Object.keys(CREWS);
+  // 5 site days per condition, workers spread across days
+  const days = []; for (let d = 0; d < 5; d++) days.push(makeDay(CONDITIONS[condKey], seed0 + d * 97));
+  for (let i = 0; i < n; i++) {
+    const crew = crews[i % 3];
+    const w = makeWorker(crew, seed0 * 1000 + i * 13 + 5);
+    cases.push({ w, env: days[i % days.length], seed: seed0 + i * 7919, crew });
+  }
+  return cases;
+}
+
+const API = { CONDITIONS, CREWS, SHIFT, SCHEDULED, buildCases, evaluate, runDay, makeWorker, makeDay, percentile, isScheduledRest };
+if (typeof module === 'object' && module.exports) module.exports = API; else window.HeatSim = API;
+</script>
+<script>window.RESULTS={"generated":"2026-11-13T07:27:49.511Z","n_per_condition":240,"test_seed":1000,"tuned":{"threshold":{"offs":[-4,-1.5,2],"rest3":45,"refr3":45,"rest2":15,"sc":{"lost":398.53194444444443,"worst385":0.011111111111111112,"worst39":0,"min385":0.2}},"twin_env":{"thrY":38.1,"thrO":38.3,"thrR":38.5,"ms":1,"sc":{"lost":280.50416666666666,"worst385":0.03333333333333333,"worst39":0,"min385":0.29166666666666663}},"twin_hr":{"kFuse":0.01,"m0":0.3,"hrClamp":0.3,"sc":{"lost":308.42083333333335,"worst385":0.05555555555555555,"worst39":0,"min385":0.13333333333333333}},"trainSeed":11},"conditions":{"mild":{"label":"Mild day","results":{"status":{"kind":"status","n":240,"events":51,"sensitivity":0,"leadMedian":null,"leadP25":null,"alertsPerWorkerDay":0,"falseAlertRate":0,"falseAlertsPerWorkerDay":0,"pctWorkersAbove385":0.2125,"pctWorkersAbove39":0.06666666666666667,"minAbove385PerWorker":30.85,"emergenciesPer100":0,"extraRestMinPerWorker":0,"lostWorkMinPerWorker":0,"peakP50":38.203153681009056,"peakP95":39.09094850504912},"threshold":{"kind":"threshold","n":240,"events":51,"sensitivity":0.8431372549019608,"leadMedian":110,"leadP25":72.5,"alertsPerWorkerDay":2.620833333333333,"falseAlertRate":0.7885532591414944,"falseAlertsPerWorkerDay":2.066666666666667,"pctWorkersAbove385":0.0375,"pctWorkersAbove39":0,"minAbove385PerWorker":2.2958333333333334,"emergenciesPer100":0,"extraRestMinPerWorker":151.7125,"lostWorkMinPerWorker":233.58125,"peakP50":37.80092397278227,"peakP95":38.40233800435419},"twin_env":{"kind":"twin_env","n":240,"events":51,"sensitivity":0.9803921568627451,"leadMedian":109.5,"leadP25":59.75,"alertsPerWorkerDay":2.5083333333333333,"falseAlertRate":0.7475083056478405,"falseAlertsPerWorkerDay":1.875,"pctWorkersAbove385":0.004166666666666667,"pctWorkersAbove39":0,"minAbove385PerWorker":0.5208333333333334,"emergenciesPer100":0,"extraRestMinPerWorker":71.35,"lostWorkMinPerWorker":110.51666666666667,"peakP50":37.927924155010935,"peakP95":38.26164398042361},"twin_hr":{"kind":"twin_hr","n":240,"events":51,"sensitivity":0.9803921568627451,"leadMedian":119.5,"leadP25":77.5,"alertsPerWorkerDay":3.279166666666667,"falseAlertRate":0.8119440914866582,"falseAlertsPerWorkerDay":2.6625,"pctWorkersAbove385":0.004166666666666667,"pctWorkersAbove39":0,"minAbove385PerWorker":0.275,"emergenciesPer100":0,"extraRestMinPerWorker":90.1875,"lostWorkMinPerWorker":137.98333333333332,"peakP50":37.86150859491086,"peakP95":38.20326068516713}}},"humid":{"label":"Hot and humid","results":{"status":{"kind":"status","n":240,"events":225,"sensitivity":0,"leadMedian":null,"leadP25":null,"alertsPerWorkerDay":0,"falseAlertRate":0,"falseAlertsPerWorkerDay":0,"pctWorkersAbove385":0.9375,"pctWorkersAbove39":0.6041666666666666,"minAbove385PerWorker":267.56666666666666,"emergenciesPer100":0,"extraRestMinPerWorker":0,"lostWorkMinPerWorker":0,"peakP50":39.13331463526088,"peakP95":40.338466267202485},"threshold":{"kind":"threshold","n":240,"events":225,"sensitivity":1,"leadMedian":112,"leadP25":66,"alertsPerWorkerDay":2.6166666666666667,"falseAlertRate":0.49044585987261147,"falseAlertsPerWorkerDay":1.2833333333333334,"pctWorkersAbove385":0,"pctWorkersAbove39":0,"minAbove385PerWorker":0,"emergenciesPer100":0,"extraRestMinPerWorker":464.15416666666664,"lostWorkMinPerWorker":470.6166666666667,"peakP50":37.62660792529018,"peakP95":38.014476601238094},"twin_env":{"kind":"twin_env","n":240,"events":225,"sensitivity":1,"leadMedian":80,"leadP25":46,"alertsPerWorkerDay":1.9041666666666666,"falseAlertRate":0.40919037199124725,"falseAlertsPerWorkerDay":0.7791666666666667,"pctWorkersAbove385":0.016666666666666666,"pctWorkersAbove39":0,"minAbove385PerWorker":0.42916666666666664,"emergenciesPer100":0,"extraRestMinPerWorker":355.5083333333333,"lostWorkMinPerWorker":393.46875,"peakP50":38.00498972100131,"peakP95":38.38650056812294},"twin_hr":{"kind":"twin_hr","n":240,"events":225,"sensitivity":1,"leadMedian":89,"leadP25":54,"alertsPerWorkerDay":1.7125,"falseAlertRate":0.46228710462287104,"falseAlertsPerWorkerDay":0.7916666666666666,"pctWorkersAbove385":0.0125,"pctWorkersAbove39":0,"minAbove385PerWorker":0.18333333333333332,"emergenciesPer100":0,"extraRestMinPerWorker":385.34583333333336,"lostWorkMinPerWorker":415.9145833333333,"peakP50":37.94536914534551,"peakP95":38.30838867433926}}},"dry":{"label":"Hot and dry","results":{"status":{"kind":"status","n":240,"events":131,"sensitivity":0,"leadMedian":null,"leadP25":null,"alertsPerWorkerDay":0,"falseAlertRate":0,"falseAlertsPerWorkerDay":0,"pctWorkersAbove385":0.5458333333333333,"pctWorkersAbove39":0.19166666666666668,"minAbove385PerWorker":90.475,"emergenciesPer100":0,"extraRestMinPerWorker":0,"lostWorkMinPerWorker":0,"peakP50":38.54508640459758,"peakP95":39.3994583575242},"threshold":{"kind":"threshold","n":240,"events":131,"sensitivity":1,"leadMedian":121,"leadP25":102,"alertsPerWorkerDay":15.295833333333333,"falseAlertRate":0.5965676927267775,"falseAlertsPerWorkerDay":9.125,"pctWorkersAbove385":0.008333333333333333,"pctWorkersAbove39":0,"minAbove385PerWorker":0.25,"emergenciesPer100":0,"extraRestMinPerWorker":374.29583333333335,"lostWorkMinPerWorker":414.89375,"peakP50":37.755832416391435,"peakP95":38.194683195615845},"twin_env":{"kind":"twin_env","n":240,"events":131,"sensitivity":1,"leadMedian":115,"leadP25":69.5,"alertsPerWorkerDay":5.5875,"falseAlertRate":0.7084265473527218,"falseAlertsPerWorkerDay":3.9583333333333335,"pctWorkersAbove385":0.008333333333333333,"pctWorkersAbove39":0,"minAbove385PerWorker":0.0625,"emergenciesPer100":0,"extraRestMinPerWorker":169.83333333333334,"lostWorkMinPerWorker":240.43125,"peakP50":37.94151651224482,"peakP95":38.305822878681056},"twin_hr":{"kind":"twin_hr","n":240,"events":131,"sensitivity":1,"leadMedian":121,"leadP25":81.5,"alertsPerWorkerDay":5.9125,"falseAlertRate":0.7392529950669485,"falseAlertsPerWorkerDay":4.370833333333334,"pctWorkersAbove385":0.008333333333333333,"pctWorkersAbove39":0,"minAbove385PerWorker":0.029166666666666667,"emergenciesPer100":0,"extraRestMinPerWorker":197.34166666666667,"lostWorkMinPerWorker":272.06666666666666,"peakP50":37.885122234234046,"peakP95":38.23659984972109}}},"extreme":{"label":"Extreme heat wave","results":{"status":{"kind":"status","n":240,"events":214,"sensitivity":0,"leadMedian":null,"leadP25":null,"alertsPerWorkerDay":0,"falseAlertRate":0,"falseAlertsPerWorkerDay":0,"pctWorkersAbove385":0.8916666666666667,"pctWorkersAbove39":0.45,"minAbove385PerWorker":209.5625,"emergenciesPer100":0,"extraRestMinPerWorker":0,"lostWorkMinPerWorker":0,"peakP50":38.94115810270925,"peakP95":40.12526832819125},"threshold":{"kind":"threshold","n":240,"events":214,"sensitivity":1,"leadMedian":121,"leadP25":90,"alertsPerWorkerDay":9.775,"falseAlertRate":0.4036658141517477,"falseAlertsPerWorkerDay":3.9458333333333333,"pctWorkersAbove385":0.016666666666666666,"pctWorkersAbove39":0.004166666666666667,"minAbove385PerWorker":0.3375,"emergenciesPer100":0,"extraRestMinPerWorker":445.0625,"lostWorkMinPerWorker":460.2604166666667,"peakP50":37.62458309656972,"peakP95":38.06048566397617},"twin_env":{"kind":"twin_env","n":240,"events":214,"sensitivity":1,"leadMedian":103,"leadP25":57.25,"alertsPerWorkerDay":3.441666666666667,"falseAlertRate":0.5145278450363197,"falseAlertsPerWorkerDay":1.7708333333333333,"pctWorkersAbove385":0.016666666666666666,"pctWorkersAbove39":0,"minAbove385PerWorker":0.1625,"emergenciesPer100":0,"extraRestMinPerWorker":281.3875,"lostWorkMinPerWorker":341.5125,"peakP50":38.01315742718714,"peakP95":38.38548425787437},"twin_hr":{"kind":"twin_hr","n":240,"events":214,"sensitivity":1,"leadMedian":112,"leadP25":65,"alertsPerWorkerDay":2.904166666666667,"falseAlertRate":0.593974175035868,"falseAlertsPerWorkerDay":1.725,"pctWorkersAbove385":0.004166666666666667,"pctWorkersAbove39":0,"minAbove385PerWorker":0.058333333333333334,"emergenciesPer100":0,"extraRestMinPerWorker":313.625,"lostWorkMinPerWorker":366.57916666666665,"peakP50":37.95232315145043,"peakP95":38.33856884329867}}}},"scenarios":{"full":{"label":"Normal operation","results":{"threshold":{"pctWorkersAbove385":0.016666666666666666,"pctWorkersAbove39":0,"lostWorkMinPerWorker":445.0645833333333,"minAbove385PerWorker":0.3291666666666667,"alertsPerWorkerDay":12.154166666666667},"twin_env":{"pctWorkersAbove385":0.041666666666666664,"pctWorkersAbove39":0,"lostWorkMinPerWorker":304.9375,"minAbove385PerWorker":0.21666666666666667,"alertsPerWorkerDay":4.366666666666667},"twin_hr":{"pctWorkersAbove385":0.016666666666666666,"pctWorkersAbove39":0,"lostWorkMinPerWorker":332.9770833333333,"minAbove385PerWorker":0.12916666666666668,"alertsPerWorkerDay":4.020833333333333}}},"nowear":{"label":"No wearables","results":{"threshold":{"pctWorkersAbove385":0.016666666666666666,"pctWorkersAbove39":0,"lostWorkMinPerWorker":445.0645833333333,"minAbove385PerWorker":0.3291666666666667,"alertsPerWorkerDay":12.154166666666667},"twin_env":{"pctWorkersAbove385":0.041666666666666664,"pctWorkersAbove39":0,"lostWorkMinPerWorker":304.9375,"minAbove385PerWorker":0.21666666666666667,"alertsPerWorkerDay":4.366666666666667},"twin_hr":{"pctWorkersAbove385":0.041666666666666664,"pctWorkersAbove39":0,"lostWorkMinPerWorker":304.9375,"minAbove385PerWorker":0.21666666666666667,"alertsPerWorkerDay":4.366666666666667}}},"outage":{"label":"Network outage 11:00-13:00","results":{"threshold":{"pctWorkersAbove385":0.020833333333333336,"pctWorkersAbove39":0.004166666666666667,"lostWorkMinPerWorker":439.1854166666667,"minAbove385PerWorker":0.6,"alertsPerWorkerDay":9.579166666666666},"twin_env":{"pctWorkersAbove385":0.03333333333333333,"pctWorkersAbove39":0,"lostWorkMinPerWorker":331.02708333333334,"minAbove385PerWorker":0.12916666666666668,"alertsPerWorkerDay":3.4458333333333333},"twin_hr":{"pctWorkersAbove385":0.0125,"pctWorkersAbove39":0,"lostWorkMinPerWorker":353.2104166666667,"minAbove385PerWorker":0.06666666666666667,"alertsPerWorkerDay":3.3291666666666666}}},"longout":{"label":"Network outage from 09:00","results":{"threshold":{"pctWorkersAbove385":0.08333333333333333,"pctWorkersAbove39":0.0125,"lostWorkMinPerWorker":368.4291666666667,"minAbove385PerWorker":6.1125,"alertsPerWorkerDay":2.4541666666666666},"twin_env":{"pctWorkersAbove385":0.008333333333333333,"pctWorkersAbove39":0,"lostWorkMinPerWorker":390.2145833333333,"minAbove385PerWorker":0.058333333333333334,"alertsPerWorkerDay":1.7041666666666666},"twin_hr":{"pctWorkersAbove385":0.008333333333333333,"pctWorkersAbove39":0,"lostWorkMinPerWorker":400.0854166666667,"minAbove385PerWorker":0.008333333333333333,"alertsPerWorkerDay":1.8}}},"nosite":{"label":"Site weather station dead","results":{"threshold":{"pctWorkersAbove385":0.19166666666666665,"pctWorkersAbove39":0.04583333333333333,"lostWorkMinPerWorker":282.13958333333335,"minAbove385PerWorker":23.045833333333334,"alertsPerWorkerDay":0},"twin_env":{"pctWorkersAbove385":0,"pctWorkersAbove39":0,"lostWorkMinPerWorker":474.35833333333335,"minAbove385PerWorker":0,"alertsPerWorkerDay":0.475},"twin_hr":{"pctWorkersAbove385":0,"pctWorkersAbove39":0,"lostWorkMinPerWorker":474.1145833333333,"minAbove385PerWorker":0,"alertsPerWorkerDay":0.475}}}},"rotation":{"dry":{"label":"Hot and dry","chosen":{"work":20,"rest":15,"mode":"vest","risk":0.06666666666666667,"risk39":0.016666666666666666,"productivity":0.5833333333333334},"meetsTarget":false,"planNoBreaks":{"risk":0.7416666666666667,"productivity":1},"statusQuo":{"pctAbove385":0.6083333333333333,"pctAbove39":0.2,"min385":97.00833333333334},"rotated":{"pctAbove385":0.10833333333333334,"pctAbove39":0.025,"min385":5.866666666666666,"restShare":0.42857142857142855}},"extreme":{"label":"Extreme heat wave","chosen":{"work":20,"rest":30,"mode":"vest","risk":0.05,"risk39":0,"productivity":0.4444444444444444},"meetsTarget":true,"planNoBreaks":{"risk":1,"productivity":1},"statusQuo":{"pctAbove385":0.8833333333333333,"pctAbove39":0.5416666666666666,"min385":205.2},"rotated":{"pctAbove385":0.15833333333333333,"pctAbove39":0.008333333333333333,"min385":4.491666666666666,"restShare":0.6}}},"pooled":{"status":{"sensitivity":null,"leadMedian":0,"alertsPerWorkerDay":0,"falseAlertRate":0,"pctWorkersAbove385":0.646875,"pctWorkersAbove39":0.328125,"minAbove385PerWorker":149.61354166666666,"lostWorkMinPerWorker":0,"emergenciesPer100":0},"threshold":{"sensitivity":0.9871175523349437,"leadMedian":116,"alertsPerWorkerDay":7.5770833333333325,"falseAlertRate":0.5698081564731577,"pctWorkersAbove385":0.015625,"pctWorkersAbove39":0.0010416666666666667,"minAbove385PerWorker":0.7208333333333333,"lostWorkMinPerWorker":394.83802083333336,"emergenciesPer100":0},"twin_env":{"sensitivity":0.998389694041868,"leadMedian":101.875,"alertsPerWorkerDay":3.3604166666666666,"falseAlertRate":0.5949132675070323,"pctWorkersAbove385":0.011458333333333334,"pctWorkersAbove39":0,"minAbove385PerWorker":0.29375,"lostWorkMinPerWorker":271.48229166666664,"emergenciesPer100":0},"twin_hr":{"sensitivity":0.998389694041868,"leadMedian":110.375,"alertsPerWorkerDay":3.4520833333333334,"falseAlertRate":0.6518645915530865,"pctWorkersAbove385":0.007291666666666667,"pctWorkersAbove39":0,"minAbove385PerWorker":0.13645833333333335,"lostWorkMinPerWorker":298.1359375,"emergenciesPer100":0}}};</script>
+<script>
+(function(){
+'use strict';
+var H=window.HeatTwin,S=window.HeatSim,R=window.RESULTS;
+function $(id){return document.getElementById(id);}
+var LANGS=H.LANGS;
+var LVL={en:['Normal','Caution','Warning','Danger','Emergency'],hi:['सामान्य','सावधान','चेतावनी','खतरा','आपातकाल'],ar:['طبيعي','تنبيه','تحذير','خطر','طوارئ'],ur:['معمول','احتیاط','انتباہ','خطرہ','ایمرجنسی'],bn:['স্বাভাবিক','সতর্কতা','সতর্কবার্তা','বিপদ','জরুরি'],tl:['Normal','Mag-ingat','Babala','Panganib','Emergency']};
+var LVE=LVL.en;
+var REST={en:'Stay resting. You are not cleared to go back to work yet. Keep drinking water.',hi:'आराम जारी रखें। अभी आपको काम पर लौटने की अनुमति नहीं है। पानी पीते रहें।',ar:'واصل الراحة. لم يُسمح لك بالعودة إلى العمل بعد. واصل شرب الماء.',ur:'آرام جاری رکھیں۔ ابھی آپ کو کام پر واپس جانے کی اجازت نہیں ہے۔ پانی پیتے رہیں۔',bn:'বিশ্রাম চালিয়ে যান। আপনাকে এখনো কাজে ফেরার অনুমতি দেওয়া হয়নি। পানি পান করতে থাকুন।',tl:'Magpahinga pa. Hindi ka pa pinapayagang bumalik sa trabaho. Patuloy na uminom ng tubig.'};
+var CREWL={construction:'Construction',logistics:'Logistics',industrial:'Industrial'};
+var NAMES='ABCDEFGHIJKL'.split('');
+var LADDER=['Site weather and your wearable','Site weather only','Last known weather, margin widened','Offline: conservative defaults'];
+var st={cond:'dry',wear:true,outage:false,dead:false,lang:'en',sel:0,min:240,play:false,truth:false,seed:1,crewN:12,task:'moderate',sym:null,tab:'worker'};
+var day=null,timer=null;
+
+function pad(n){return (n<10?'0':'')+n;}
+function clock(m){var t=7*60+m;return pad(Math.floor(t/60))+':'+pad(t%60);}
+function pct(x,d){return (100*x).toFixed(d==null?1:d)+'%';}
+function f1(x){return x==null||isNaN(x)?'-':x.toFixed(1);}
+function f0(x){return x==null||isNaN(x)?'-':Math.round(x).toString();}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+function twinParams(kind){
+  var e=R.tuned.twin_env,h=R.tuned.twin_hr;
+  var margin=H.DEFAULTS.margin.map(function(x){return x*e.ms;});
+  var base={thrY:e.thrY,thrO:e.thrO,thrR:e.thrR,margin:margin};
+  if(kind==='twin_hr'){margin=margin.slice();margin[0]=h.m0*e.ms;base.margin=margin;base.kFuse=h.kFuse;base.hrClamp=h.hrClamp;}
+  return Object.assign({},H.DEFAULTS,base);
+}
+
+function compute(){
+  var crews=['construction','logistics','industrial'];
+  var env=S.makeDay(S.CONDITIONS[st.cond],4000+st.seed*13);
+  var kind=st.wear?'twin_hr':'twin_env';
+  var scen={twinParams:twinParams(kind),wearable:st.wear,outage:st.outage?[[240,360]]:null,noEnvAtAll:st.dead};
+  var workers=[];
+  for(var i=0;i<12;i++){
+    var crew=crews[i%3];
+    var w=S.makeWorker(crew,900+st.seed*101+i*17);
+    var log=S.runDay(w,env,kind,scen,true,500+st.seed*7+i);
+    workers.push({w:w,log:log,crew:crew});
+  }
+  var offs=R.tuned.threshold.offs;
+  var thr=env.map(function(e){return H.siteLevelFromEnv(e,'moderate',0.7,'cotton',offs);});
+  day={env:env,workers:workers,thr:thr,kind:kind};
+}
+function pickInteresting(){
+  var m=st.min,best=0,bs=-1e9;
+  day.workers.forEach(function(x,i){
+    var working=x.log.act[m]!=='rest';
+    var sc=(working?100:0)+x.log.levels[m]*10+(x.log.est[m]-37);
+    if(sc>bs){bs=sc;best=i;}
+  });
+  st.sel=best;
+}
+
+/* ---------- worker view ---------- */
+function acclLabel(a){return a>=0.9?'Acclimatised':a>=0.6?'Partly acclimatised':'New to working in heat';}
+function renderWorker(){
+  var x=day.workers[st.sel],m=st.min,log=x.log,w=x.w;
+  var level=log.levels[m];
+  if(st.sym==='severe')level=4;else if(st.sym==='mild')level=Math.max(level,2);
+  var lang=st.lang,rtl=(lang==='ar'||lang==='ur');
+  var el=$('alert');
+  el.className='alert l'+level;
+  var planned=w.sched[m];
+  var resting=log.act[m]==='rest'&&!st.sym&&level>=2&&level<4;
+  el.innerHTML='<span class="lvtag">Alert level '+level+' of 4 &middot; '+clock(m)+(resting?' &middot; if you resume work':(log.act[m]!=='rest'&&planned!==log.act[m]?' &middot; for planned '+planned+' work':''))+'</span><span class="lvname '+(rtl?'rtl':'')+'" lang="'+lang+'">'+esc(LVL[lang][level])+'</span><p class="act '+(rtl?'rtl':'')+'" lang="'+lang+'">'+esc(resting?REST[lang]:H.ACTIONS[lang][level])+'</p>';
+  var ttl=log.ttl[m],act=log.act[m];
+  $('ttl').textContent=ttl==null?'> 60 min':(ttl===0?'Now':ttl+' min');
+  $('ttlNote').textContent=act==='rest'?'if you go back to work now':'if you carry on with your planned task';
+  var tc=log.est[m];
+  $('tcest').textContent=f1(tc)+' °C';
+  var g=Math.max(0,Math.min(1,(tc-37)/(39.5-37)));
+  $('gmark').style.left=(g*100)+'%';
+  var chips=[];
+  chips.push('<span class="chip">Now: '+(act==='rest'?'Resting':act.charAt(0).toUpperCase()+act.slice(1)+' work')+'</span>');
+  chips.push('<span class="chip">Planned: '+planned.charAt(0).toUpperCase()+planned.slice(1)+' work</span>');
+  var lad=log.ladder[m];
+  chips.push('<span class="chip'+(lad>=2?' warn':'')+'">Data: '+LADDER[lad]+'</span>');
+  if(st.sym)chips.push('<span class="chip warn">Symptom report sent</span>');
+  $('wchips').innerHTML=chips.join('');
+  $('symMild').setAttribute('aria-pressed',st.sym==='mild');
+  $('symSev').setAttribute('aria-pressed',st.sym==='severe');
+  $('profLine').textContent='Worker '+NAMES[st.sel]+' · '+CREWL[x.crew]+' crew · '+H.PPE[w.profile.ppe].label+' · '+acclLabel(w.profile.acc);
+  drawWorkerChart(x,m);
+  $('knows').innerHTML='Planned task, protective clothing and acclimatisation set by the worker. Site weather from the on-site station'+(st.wear&&!w.hidden.noWearable?', plus heart rate from the worker\'s own wearable.':'.')+' Everything on this screen is computed on the worker\'s phone. Nothing about this worker leaves the phone except crew totals and an emergency release.';
+}
+
+function svgEl(tag,attrs,inner){var s='<'+tag;for(var k in attrs)s+=' '+k+'="'+attrs[k]+'"';return s+(inner==null?'/>':'>'+inner+'</'+tag+'>');}
+function drawWorkerChart(x,m){
+  var narrow=($('wchart').clientWidth||600)<520;var W=narrow?420:640,Ht=narrow?250:270,ml=40,mr=10,mt=10,mb=44,log=x.log;
+  function X(i){return ml+i/479*(W-ml-mr);}
+  var y0=36.8,y1=40.2;
+  function Y(t){return mt+(1-(t-y0)/(y1-y0))*(Ht-mt-mb);}
+  var s='';
+  // rest bands
+  var i=0;
+  while(i<=m){if(log.act[i]==='rest'){var j=i;while(j<=m&&log.act[j]==='rest')j++;s+=svgEl('rect',{x:X(i),y:mt,width:Math.max(1,X(j)-X(i)),height:Ht-mt-mb,fill:'var(--band)'});i=j;}else i++;}
+  // grid and axes
+  [37,38,39,40].forEach(function(t){s+=svgEl('line',{x1:ml,x2:W-mr,y1:Y(t),y2:Y(t),stroke:'var(--line)','stroke-width':1});s+=svgEl('text',{x:ml-6,y:Y(t)+3,'text-anchor':'end'},t+'°');});
+  for(var h=0;h<=8;h+=2){s+=svgEl('text',{x:X(h*60>479?479:h*60),y:Ht-mb+14,'text-anchor':'middle'},pad(7+h)+':00');}
+  s+=svgEl('line',{x1:ml,x2:W-mr,y1:Y(38.5),y2:Y(38.5),stroke:'var(--lv2)','stroke-width':1.5,'stroke-dasharray':'5 4'});
+  s+=svgEl('text',{x:W-mr,y:Y(38.5)-4,'text-anchor':'end'},'38.5 °C limit');
+  s+=svgEl('line',{x1:ml,x2:W-mr,y1:Y(39),y2:Y(39),stroke:'var(--lv3)','stroke-width':1.5,'stroke-dasharray':'2 3'});
+  s+=svgEl('text',{x:W-mr,y:Y(39)-4,'text-anchor':'end'},'39.0 °C');
+  // truth
+  if(st.truth){var pts=[];for(var k=0;k<=m;k++)pts.push(X(k).toFixed(1)+','+Y(Math.min(y1,log.minTc[k])).toFixed(1));s+=svgEl('polyline',{points:pts.join(' '),fill:'none',stroke:'var(--truth)','stroke-width':2,'stroke-dasharray':'4 3'});}
+  // estimate
+  var p2=[];for(var q=0;q<=m;q++)p2.push(X(q).toFixed(1)+','+Y(Math.min(y1,Math.max(y0,log.est[q]))).toFixed(1));
+  s+=svgEl('polyline',{points:p2.join(' '),fill:'none',stroke:'var(--accent)','stroke-width':2.5,'stroke-linejoin':'round'});
+  // alert strip
+  var sy=Ht-mb+24;
+  for(var a=0;a<=m;a+=3){var lv=log.levels[a];s+=svgEl('rect',{x:X(a),y:sy,width:Math.max(1.5,X(3)-X(0)),height:8,fill:'var(--lv'+lv+')'});}
+  s+=svgEl('text',{x:ml-6,y:sy+8,'text-anchor':'end'},'alert');
+  // now
+  s+=svgEl('line',{x1:X(m),x2:X(m),y1:mt,y2:Ht-mb+6,stroke:'var(--ink)','stroke-width':1});
+  s+=svgEl('circle',{cx:X(m),cy:Y(Math.min(y1,Math.max(y0,log.est[m]))),r:4.5,fill:'var(--accent)',stroke:'var(--surface)','stroke-width':2});
+  $('wchart').innerHTML='<svg viewBox="0 0 '+W+' '+Ht+'" role="img" aria-label="Estimated body heat load for the selected worker over the shift, with the 38.5 degree limit">'+s+'</svg>';
+  $('wlegend').innerHTML='<span><i style="background:var(--accent)"></i>Twin estimate</span>'+(st.truth?'<span><i style="background:var(--truth)"></i>Simulator ground truth</span>':'')+'<span><i style="background:var(--band);height:10px;width:14px"></i>Rest</span><span><i style="background:var(--lv2)"></i>38.5 °C limit</span>';
+}
+
+/* ---------- supervisor view ---------- */
+function renderSup(){
+  var m=st.min,n=st.crewN,ws=day.workers.slice(0,n);
+  var env=day.env[m];
+  var states=ws.map(function(x){return {level:x.log.levels[m]};});
+  var cv=H.crewView(states,day.thr[m],5);
+  var wb=H.wbgtSun(env);
+  var feed=st.dead?'Offline all day':(st.outage&&m>=240&&m<360)?'Lost, using last reading':'Live';
+  $('supKpis').innerHTML=
+    '<div class="kpi"><span class="label">Air temperature</span><b>'+f0(env.ta)+' °C</b></div>'+
+    '<div class="kpi"><span class="label">Humidity</span><b>'+f0(env.rh)+'%</b></div>'+
+    '<div class="kpi"><span class="label">Sun WBGT</span><b>'+f1(wb)+' °C</b></div>'+
+    '<div class="kpi"><span class="label">Weather feed</span><b style="font-size:22px">'+feed+'</b></div>';
+  var h='';
+  if(cv.suppressed){
+    h='<div class="notice warn">'+esc(cv.note)+'</div><p style="margin-top:10px">Site conditions: <b>'+LVE[cv.siteLevel]+'</b> by the standard rule. Add people to this crew or merge crews to see crew totals.</p>';
+  }else{
+    var segs=cv.share.map(function(p,i){return p>0?'<span style="width:'+p+'%;background:var(--lv'+i+')" title="'+LVE[i]+' '+p+'%"></span>':'';}).join('');
+    var leg=cv.share.map(function(p,i){return '<span><i class="dot" style="background:var(--lv'+i+')"></i>'+LVE[i]+' '+p+'%</span>';}).join('');
+    h='<p class="label">Crew level</p><p style="font-family:var(--f-head);font-weight:700;font-size:34px;line-height:1.1"><span class="dot" style="width:16px;height:16px;border-radius:4px;background:var(--lv'+cv.crewLevel+')"></span>'+LVE[cv.crewLevel]+'</p>'+
+      '<div class="stack" style="margin:10px 0 0" role="img" aria-label="Share of crew at each level">'+segs+'</div><div class="stack-l">'+leg+'</div>'+
+      '<p style="margin-top:12px"><b>About '+cv.needCheck+'%</b> of the crew would pass safe limits if they carried on with the planned task now. About <b>'+(Math.round(ws.filter(function(x){return x.log.act[m]==='rest';}).length/n*10)*10)+'%</b> are already resting.</p>';
+  }
+  $('crewNow').innerHTML=h;
+  var thrL=day.thr[m];
+  var dyn=cv.suppressed?'n/a':(cv.needCheck+'% not fit for the planned task');
+  $('compare').innerHTML=
+    '<table><tbody><tr><td class="label">Standard rule</td><td><b>'+LVE[thrL]+'</b> for everyone</td></tr>'+
+    '<tr><td class="label">HeatTwin</td><td><b>'+(cv.suppressed?'Crew too small to show':LVE[cv.crewLevel])+'</b>, '+dyn+'</td></tr></tbody></table>'+
+    '<p class="muted" style="margin-top:10px">A site-wide rule treats a fit, acclimatised light-duty worker like a new starter in a heavy coverall. HeatTwin gives each person their own warning and shows the supervisor only the crew total.</p>';
+  drawCrewChart(ws,m);
+  renderSupKpiExtra();
+}
+function renderSupKpiExtra(){}
+function drawCrewChart(ws,m){
+  var narrow=($('crewChart').clientWidth||900)<520;var W=narrow?420:1000,Ht=narrow?200:190,ml=36,mr=8,mt=8,mb=24,step=6;
+  var s='';
+  function X(i){return ml+i/479*(W-ml-mr);}
+  var bw=Math.max(2,X(step)-X(0)-1);
+  [0,50,100].forEach(function(p){var y=mt+(1-p/100)*(Ht-mt-mb);s+=svgEl('line',{x1:ml,x2:W-mr,y1:y,y2:y,stroke:'var(--line)'});s+=svgEl('text',{x:ml-5,y:y+3,'text-anchor':'end'},p+'%');});
+  for(var h=0;h<=8;h+=2){s+=svgEl('text',{x:X(Math.min(479,h*60)),y:Ht-6,'text-anchor':'middle'},pad(7+h)+':00');}
+  for(var k=0;k<=m;k+=step){
+    var cnt=[0,0,0,0,0];ws.forEach(function(x){cnt[x.log.levels[k]]++;});
+    var acc=0;
+    for(var l=0;l<5;l++){
+      if(!cnt[l])continue;
+      var hh=cnt[l]/ws.length*(Ht-mt-mb);
+      var y=Ht-mb-acc-hh;
+      s+=svgEl('rect',{x:X(k),y:y,width:bw,height:hh,fill:'var(--lv'+l+')'});
+      acc+=hh;
+    }
+  }
+  s+=svgEl('line',{x1:X(m),x2:X(m),y1:mt,y2:Ht-mb,stroke:'var(--ink)'});
+  $('crewChart').innerHTML='<svg viewBox="0 0 '+W+' '+Ht+'" role="img" aria-label="Share of the crew at each alert level through the shift">'+s+'</svg>';
+  $('crewLegend').innerHTML=LVE.map(function(n,i){return '<span><i class="dot" style="background:var(--lv'+i+')"></i>'+n+'</span>';}).join('');
+}
+function runPlan(){
+  var m=st.min,n=st.crewN,ws=day.workers.slice(0,n);
+  if(n<5){$('planOut').innerHTML='<div class="notice warn">Crew planning needs at least 5 people so that no individual can be read from the result.</div>';return;}
+  var tp=twinParams('twin_env');
+  var twins=ws.map(function(x){var t=new H.WorkerTwin(x.w.profile,tp);t.tc=x.log.est[m]||37;t.d=x.log.dh[m]||0.5;t.lastEnv=day.env[m];t.lastEnvMin=0;t.minute=0;t.ladder=1;return t;});
+  var horizon=Math.min(180,479-m);
+  if(horizon<30){$('planOut').innerHTML='<p class="muted">Less than 30 minutes left in the shift.</p>';return;}
+  var t0=performance.now();
+  var plan=H.optimizeRotation(twins,st.task,function(i){return day.env[Math.min(479,m+i)];},{horizon:horizon,samples:8,seed:3});
+  var b=plan.best,nb=plan.noBreaks;
+  function cyc(c){return c.rest===0?'No planned breaks':c.work+' min work, '+c.rest+' min rest'+(c.mode==='vest'?' with cooling vests':' in shade');}
+  var rows=plan.frontier.slice(0,6).map(function(c){return '<tr'+(c===b?' class="hl"':'')+'><td>'+cyc(c)+'</td><td class="n">'+pct(c.risk,0)+'</td><td class="n">'+pct(c.productivity,0)+'</td></tr>';}).join('');
+  $('planOut').innerHTML=
+    '<div class="kpis" style="margin-bottom:12px"><div class="kpi"><span class="label">Recommended</span><b style="font-size:22px">'+cyc(b)+'</b></div>'+
+    '<div class="kpi"><span class="label">Chance a worker passes 38.5 °C</span><b>'+pct(b.risk,0)+'</b><span class="muted">vs '+pct(nb.risk,0)+' with no breaks</span></div>'+
+    '<div class="kpi"><span class="label">Time working</span><b>'+pct(b.productivity,0)+'</b><span class="muted">of the next '+horizon+' min</span></div></div>'+
+    (plan.bestMeetsTarget?'':'<div class="notice warn" style="margin-bottom:12px">No schedule met the 5% target for this crew and task. Showing the lowest-risk option. Consider moving the task to a cooler hour or changing it.</div>')+
+    '<div class="tw"><table><thead><tr><th>Schedule</th><th class="n">Chance over 38.5 °C</th><th class="n">Time working</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<p class="muted" style="margin-top:8px">Computed in your browser in '+Math.round(performance.now()-t0)+' ms from '+n+' crew twins and 8 random draws each. Rest is assumed at the planned site shade; cooling vests are an option the site would need to supply.</p>';
+}
+function emgDemo(){
+  var m=st.min;
+  var t=clock(m),t2=clock(Math.min(479,m+60));
+  $('emgOut').innerHTML='<div class="log" role="log">'+
+   '<span>'+t+'  Worker app: severe symptom reported, alert level 4</span>'+
+   '<span>'+t+'  Phone sends the worker\'s ID, location and last alert to the site medic only</span>'+
+   '<span>'+t+'  Supervisor screen: "Emergency on site, medic notified". No name shown</span>'+
+   '<span>'+t+'  Audit log: release #1, role site medic, reason emergency alert, expires '+t2+'</span>'+
+   '<span>'+t2+'  Release expires. Worker can view the audit entry in their app</span></div>'+
+   '<p class="muted" style="margin-top:8px">Example only. No real notification is sent.</p>';
+}
+
+/* ---------- evidence ---------- */
+function bar(v,max,bad){return '<span class="mini'+(bad?' bad':'')+'" style="width:'+Math.max(1,Math.round(v/max*60))+'px"></span>';}
+var KN={status:'Scheduled breaks only',threshold:'Site-wide threshold (tuned)',twin_env:'HeatTwin',twin_hr:'HeatTwin with wearable'};
+function renderEvidence(){
+  var P=R.pooled,nTot=R.n_per_condition*4;
+  $('evIntro').innerHTML='<h2 style="margin-bottom:8px">Does it work? Simulated evidence, reported plainly</h2><p>We simulated '+nTot+' held-out worker-days on four weather types and three crew types. The simulator hides each worker\'s true physiology, so the twin is judged against something it cannot see. All numbers are from simulation, not from people. Thresholds for every strategy were tuned on separate crews first.</p>';
+  var rows=['status','threshold','twin_env','twin_hr'].map(function(k){
+    var r=P[k],isT=k==='twin_env';
+    return '<tr'+(isT?' class="hl"':'')+'><td><b>'+KN[k]+'</b></td>'+
+      '<td class="n">'+pct(r.pctWorkersAbove385)+bar(r.pctWorkersAbove385,0.7,true)+'</td>'+
+      '<td class="n">'+pct(r.pctWorkersAbove39)+'</td>'+
+      '<td class="n">'+(k==='status'?'0':f0(r.lostWorkMinPerWorker))+(k==='status'?'':bar(r.lostWorkMinPerWorker,400))+'</td>'+
+      '<td class="n">'+(k==='status'?'-':f1(r.alertsPerWorkerDay))+'</td>'+
+      '<td class="n">'+(k==='status'?'-':pct(r.falseAlertRate,0))+'</td>'+
+      '<td class="n">'+(k==='status'?'-':f0(r.leadMedian)+' min')+'</td>'+
+      '<td class="n">'+(k==='status'?'-':pct(r.sensitivity,0))+'</td></tr>';
+  }).join('');
+  $('evPooled').innerHTML='<table><thead><tr><th>Strategy</th><th class="n">Above 38.5 °C</th><th class="n">Above 39 °C</th><th class="n">Lost min/day</th><th class="n">Alerts/day</th><th class="n">No event ahead</th><th class="n">Lead time</th><th class="n">Events warned</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  var tw=P.threshold,te=P.twin_env;
+  $('evPooledNote').innerHTML='Above 38.5 and 39 °C are shares of worker-days. Lost work counts extra rest time plus half of any reduced-intensity time. Lead time is the minutes between the first sustained warning and the simulated body temperature reaching 38.5 °C if no one acted. An alert counts as "no event ahead" if the body temperature does not reach 38.5 °C within 90 minutes without action. We tuned toward safety, so about '+pct(te.falseAlertRate,0)+' of alerts fall in that group.';
+  var cr=[];
+  ['mild','humid','dry','extreme'].forEach(function(c){
+    var cc=R.conditions[c];
+    ['status','threshold','twin_env'].forEach(function(k,i){
+      var r=cc.results[k];
+      cr.push('<tr'+(k==='twin_env'?' class="hl"':'')+'><td>'+(i===0?'<b>'+cc.label+'</b>':'')+'</td><td>'+KN[k]+'</td><td class="n">'+pct(r.pctWorkersAbove385)+'</td><td class="n">'+pct(r.pctWorkersAbove39)+'</td><td class="n">'+(k==='status'?'0':f0(r.lostWorkMinPerWorker))+'</td></tr>');
+    });
+  });
+  $('evCond').innerHTML='<table><thead><tr><th>Weather</th><th>Strategy</th><th class="n">Above 38.5 °C</th><th class="n">Above 39 °C</th><th class="n">Lost min</th></tr></thead><tbody>'+cr.join('')+'</tbody></table>';
+  var sr=Object.keys(R.scenarios).map(function(k){
+    var s=R.scenarios[k].results;
+    function c(x){return '<td class="n">'+pct(x.pctWorkersAbove385)+' / '+f0(x.lostWorkMinPerWorker)+'</td>';}
+    return '<tr><td><b>'+R.scenarios[k].label+'</b></td>'+c(s.threshold)+c(s.twin_env)+c(s.twin_hr)+'</tr>';
+  }).join('');
+  $('evScen').innerHTML='<table><thead><tr><th>Scenario</th><th class="n">Site threshold</th><th class="n">HeatTwin</th><th class="n">With wearable</th></tr></thead><tbody>'+sr+'</tbody></table><p class="muted" style="padding:8px 10px;font-size:12px">Each cell: share of worker-days above 38.5 °C / lost work minutes per day.</p>';
+  var rr=Object.keys(R.rotation).map(function(k){
+    var r=R.rotation[k],c=r.chosen;
+    return '<tr><td><b>'+r.label+'</b></td><td>'+c.work+' min work, '+c.rest+' min rest, '+(c.mode==='vest'?'cooling vest':'shade')+'</td><td class="n">'+pct(r.statusQuo.pctAbove385)+'</td><td class="n">'+pct(r.rotated.pctAbove385)+'</td><td class="n">'+pct(r.rotated.pctAbove39)+'</td><td class="n">'+pct(r.rotated.restShare,0)+'</td></tr>';
+  }).join('');
+  $('evRot').innerHTML='<table><thead><tr><th>Weather</th><th>Recommended cycle (11:00 to 14:00)</th><th class="n">Above 38.5 °C, usual breaks</th><th class="n">Above 38.5 °C, rotation</th><th class="n">Above 39 °C, rotation</th><th class="n">Time resting</th></tr></thead><tbody>'+rr+'</tbody></table>';
+  var d0=R.conditions.dry.results,e0=R.conditions.extreme.results;
+  var saved=1-te.lostWorkMinPerWorker/tw.lostWorkMinPerWorker;
+  $('evFind').innerHTML=
+   '<li>With only scheduled breaks, '+pct(P.status.pctWorkersAbove385,0)+' of worker-days pass 38.5 °C and '+pct(P.status.pctWorkersAbove39,0)+' pass 39.0 °C in these conditions.</li>'+
+   '<li>A tuned site-wide threshold and HeatTwin both bring that down to about '+pct(tw.pctWorkersAbove385,1)+' and '+pct(te.pctWorkersAbove385,1)+'. The difference between them is within the noise of this sample.</li>'+
+   '<li>HeatTwin gets there with about '+pct(saved,0)+' less lost work ('+f0(te.lostWorkMinPerWorker)+' vs '+f0(tw.lostWorkMinPerWorker)+' minutes per worker-day) and about '+f1(te.alertsPerWorkerDay)+' alerts a day against '+f1(tw.alertsPerWorkerDay)+'. People get a break when their own model says so, not when the whole site crosses a line.</li>'+
+   '<li>When the weather feed is lost from 09:00, the site-wide rule lets '+pct(R.scenarios.longout.results.threshold.pctWorkersAbove385,1)+' of worker-days pass 38.5 °C. HeatTwin holds at '+pct(R.scenarios.longout.results.twin_env.pctWorkersAbove385,1)+' by widening its margins.</li>'+
+   '<li>With no site data at all, HeatTwin keeps everyone safe ('+pct(R.scenarios.nosite.results.twin_env.pctWorkersAbove385,1)+' over 38.5 °C) by working to conservative defaults, which costs nearly the whole shift. That is the right trade for a fallback and a strong reason to keep the weather station reliable.</li>'+
+   '<li>The recommended rotation cuts worker-days above 38.5 °C from '+pct(R.rotation.dry.statusQuo.pctAbove385,0)+' to '+pct(R.rotation.dry.rotated.pctAbove385,0)+' on the dry day and from '+pct(R.rotation.extreme.statusQuo.pctAbove385,0)+' to '+pct(R.rotation.extreme.rotated.pctAbove385,0)+' in the heat wave, at the cost of '+pct(R.rotation.dry.rotated.restShare,0)+' to '+pct(R.rotation.extreme.rotated.restShare,0)+' of time spent resting.</li>';
+  $('evLim').innerHTML=
+   '<li>Everything here is simulated. The physiology is a simplified heat balance model, not a validated clinical device. It must be validated on real heat-stress data before any use with workers.</li>'+
+   '<li>The simulator and the twin come from the same family of ideas (NIOSH limits and first-order heat storage), even though their constants and details differ. Real people will differ in ways neither captures.</li>'+
+   '<li>The wearable did not clearly help. HeatTwin with heart rate shows fewer minutes above 38.5 °C ('+f1(P.twin_hr.minAbove385PerWorker)+' vs '+f1(te.minAbove385PerWorker)+' per worker-day) but costs more lost work ('+f0(P.twin_hr.lostWorkMinPerWorker)+' vs '+f0(te.lostWorkMinPerWorker)+' minutes). We keep it optional.</li>'+
+   '<li>About '+pct(te.falseAlertRate,0)+' of alerts are followed by no event in 90 minutes. We chose that on purpose, because a missed event costs far more than an unnecessary rest.</li>'+
+   '<li>Worker compliance is assumed (75% to 85% of alerts acted on). Field trials would measure it.</li>'+
+   '<li>The WBGT calculation is a simplified outdoor approximation. Real deployments should use a calibrated black-globe sensor.</li>'+
+   '<li>Alert translations are machine drafts and need expert review.</li>'+
+   '<li>Heavy-work heat waves in the simulation produce very high rest shares. That reflects the physiology of those conditions, and sites should consider shifting hours.</li>';
+  $('evModel').innerHTML=
+   '<ul class="clean">'+
+   '<li><b>Heat load.</b> Site weather becomes WBGT (wet-bulb, globe and air temperature blend). Protective clothing adds a correction. The NIOSH recommended limit for the task\'s work rate and the worker\'s acclimatisation sets how far over the limit the worker is.</li>'+
+   '<li><b>Body temperature.</b> A first-order heat storage model moves each worker\'s estimated core temperature toward an equilibrium set by that excess, with a hydration penalty. Rest in shade or with a cooling vest pulls it back down at a faster rate.</li>'+
+   '<li><b>Warning.</b> Every two minutes the twin projects the next 30 minutes at the planned task. Alert level comes from the highest projected temperature plus a safety margin that grows as the data gets worse. A self-reported symptom raises the level directly.</li>'+
+   '<li><b>Fallback ladder.</b> Site weather plus wearable, then site weather only, then last known weather with a widening margin, then conservative defaults when there is no data.</li>'+
+   '<li><b>Return to work.</b> After a rest alert, the worker stays off hard work until the twin clears them, then works one intensity step down for 30 minutes.</li>'+
+   '<li><b>Rotation.</b> Candidate work and rest cycles are replayed through every crew twin with random draws for physiology and hydration. The planner keeps the schedule with the most work that holds the chance of 38.5 °C to 5% or less.</li></ul>';
+}
+
+/* ---------- governance ---------- */
+function renderGov(){
+  $('govYes').innerHTML=H.DATA_USE.allowed.map(function(x){return '<li>'+esc(x)+'</li>';}).join('');
+  $('govNo').innerHTML=H.DATA_USE.prohibited.map(function(x){return '<li>'+esc(x)+'</li>';}).join('');
+  var map=[
+   ['Planned task, clothing, acclimatisation','Worker\'s phone','Worker','Ends with the shift'],
+   ['Heart rate (optional wearable)','Processed on the phone, never uploaded','Worker','Deleted after the shift'],
+   ['Estimated body heat load and alert history','Worker\'s phone','Worker','Ends with the shift'],
+   ['Symptom report','Phone, then site medic if severe','Worker, and the site medic for 60 minutes after a severe report','Release logged for 12 months'],
+   ['Crew totals by alert level','Site system','Supervisors, for groups of 5 or more, rounded to 10%','12 months, no names'],
+   ['Site weather and WBGT','Site system','Everyone','12 months']
+  ];
+  $('govMap').innerHTML='<table><thead><tr><th>Data</th><th>Where it lives</th><th>Who can see it</th><th>Kept for</th></tr></thead><tbody>'+map.map(function(r){return '<tr>'+r.map(function(c,i){return '<td>'+(i===0?'<b>'+c+'</b>':c)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table>';
+  updateConsent();
+}
+function updateConsent(){
+  $('govConsent').textContent=st.wear?'Heart rate sharing is ON for crew members who have a wearable. It is a separate, revocable choice. Turning it off keeps full protection from weather, task and clothing data.':'Heart rate sharing is OFF. The twin runs on weather, task, clothing and acclimatisation alone, which is the default.';
+}
+
+/* ---------- live check: real weather + user inputs ---------- */
+var LV={loc:null,data:null};
+var LV_SUN={clear:850,part:450,over:150,night:0};
+function lvMsg(t,warn){var el=$('lvMsg');el.textContent=t||'';el.className='notice'+(warn?' warn':'');el.hidden=!t;}
+function lvGet(url){
+  var req=fetch(url).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+  var tm=new Promise(function(_,rej){setTimeout(function(){rej(new Error('timed out'));},12000);});
+  return Promise.race([req,tm]);
+}
+function lvLoad(lat,lon,label){
+  lvMsg('Fetching live weather...');
+  var u='https://api.open-meteo.com/v1/forecast?latitude='+lat.toFixed(3)+'&longitude='+lon.toFixed(3)+'&current=temperature_2m,relative_humidity_2m,wind_speed_10m,shortwave_radiation&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,shortwave_radiation&forecast_days=2&timezone=auto&wind_speed_unit=ms';
+  return lvGet(u).then(function(d){
+    if(!d||!d.current||!d.hourly||!d.hourly.time)throw new Error('unexpected response');
+    LV.data=d;LV.loc={lat:lat,lon:lon,label:label};lvMsg('');lvRender();
+  }).catch(function(e){
+    LV.data=null;lvMsg('Live weather is not reachable from this page (some hosts block outside requests). Choose "I enter conditions" to type the weather yourself, or open the standalone HeatTwin file/hosted link for live weather.',true);lvRender();
+  });
+}
+function lvSearch(){
+  var q=$('lvPlace').value.trim();if(!q)return;
+  lvMsg('Searching...');
+  lvGet('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(q)+'&count=1&language=en&format=json').then(function(r){
+    if(!r||!r.results||!r.results.length){lvMsg('No place found for "'+q+'".',true);return;}
+    var p=r.results[0];lvLoad(p.latitude,p.longitude,[p.name,p.admin1,p.country].filter(Boolean).join(', '));
+  }).catch(function(e){lvMsg('Live weather is not reachable from this page (some hosts block outside requests). Choose "I enter conditions" to type the weather yourself, or open the standalone HeatTwin file/hosted link for live weather.',true);});
+}
+function lvGeo(){
+  if(!navigator.geolocation){lvMsg('Location is not available in this browser. Search for a place instead.',true);return;}
+  lvMsg('Asking for your location...');
+  navigator.geolocation.getCurrentPosition(function(p){lvLoad(p.coords.latitude,p.coords.longitude,'Your location');},function(){lvMsg('Location was not shared. Search for a place instead.',true);},{timeout:10000,maximumAge:600000});
+}
+function hhmm(t){t=((Math.round(t)%1440)+1440)%1440;return pad(Math.floor(t/60))+':'+pad(t%60);}
+function lvEnv(){
+  var src=$('lvSrc').value,dn=new Date(),devMin=dn.getHours()*60+dn.getMinutes(),N=480,arr=[],m;
+  if(src==='none')return {env:null,nowMin:devMin,label:'No weather data: the twin works to conservative defaults'};
+  if(src==='manual'){
+    var ta=parseFloat($('lvTa').value),rh=parseFloat($('lvRh').value);
+    if(isNaN(ta)||isNaN(rh))return {error:'Enter a temperature and humidity.'};
+    var e={ta:ta,rh:Math.max(5,Math.min(100,rh)),solar:LV_SUN[$('lvSun').value],wind:2};
+    for(m=0;m<N;m++)arr.push(e);
+    return {env:arr,nowMin:devMin,label:'Conditions you entered (held steady)'};
+  }
+  var d=LV.data;
+  if(!d)return {error:'Search for a place or press "Use my location" to load live weather.'};
+  var h=d.hourly,c=d.current,idx0=h.time.indexOf(String(c.time).slice(0,13)+':00');if(idx0<0)idx0=0;
+  var k=+String(c.time).slice(14,16)||0,nowMin=(+String(c.time).slice(11,13))*60+k;
+  function at(a,p,fb){var i=Math.floor(p),f=p-i,x=a[Math.min(i,a.length-1)],y=a[Math.min(i+1,a.length-1)];if(x==null)x=fb;if(y==null)y=x;return x*(1-f)+y*f;}
+  for(m=0;m<N;m++){var p=idx0+(k+m)/60;
+    arr.push({ta:at(h.temperature_2m,p,c.temperature_2m),rh:Math.max(5,Math.min(100,at(h.relative_humidity_2m,p,c.relative_humidity_2m))),solar:Math.max(0,at(h.shortwave_radiation,p,c.shortwave_radiation||0)),wind:Math.max(0.5,at(h.wind_speed_10m,p,2))});}
+  return {env:arr,nowMin:nowMin,label:'Live weather, Open-Meteo, '+(LV.loc?LV.loc.label:''),obs:c};
+}
+function lvRun(info,task,ppe,acc,dur){
+  var p=twinParams('twin_env');
+  var tw=new H.WorkerTwin({mass:75,age:35,bmi:25,acc:acc,ppe:ppe,d0:0.5},p);
+  var o={est:[],lvl:[],firstL2:null,firstL3:null,ttl:null,maxL:0,peak:37,ladder:1},last=0,m;
+  for(m=0;m<dur;m++){
+    tw.step({env:info.env?info.env[m]:null,activity:task,cooling:'shade',hr:null});
+    o.est.push(tw.tc);o.ladder=tw.ladder;
+    if(tw.tc>o.peak)o.peak=tw.tc;
+    if(m%2===0){
+      var tr=0;
+      if(info.env){var m2=Math.min(info.env.length-1,m+30);tr=(H.wbgtSun(info.env[m2])-H.wbgtSun(info.env[m]))/30;}
+      var pr=tw.predict(task,30,tr,p.margin[tw.ladder]);
+      last=H.severity(tw.tc,pr.max,tw.ladder,null,p);
+    }
+    o.lvl.push(last);
+    if(last>o.maxL)o.maxL=last;
+    if(o.firstL2==null&&last>=2)o.firstL2=m;
+    if(o.firstL3==null&&last>=3)o.firstL3=m;
+    if(o.ttl==null&&tw.tc+p.margin[tw.ladder]>=38.5)o.ttl=m;
+  }
+  return o;
+}
+function lvChart(o,dur,nowMin){
+  var nar=($('lvOut').clientWidth||800)<560,W=nar?360:640,Ht=nar?250:230,ml=40,mr=12,mt=10,mb=44,y0=36.8,y1=39.6;
+  function X(i){return ml+i/Math.max(1,dur-1)*(W-ml-mr);}
+  function Y(t){return mt+(1-(Math.min(y1,Math.max(y0,t))-y0)/(y1-y0))*(Ht-mt-mb);}
+  var g='',t,i;
+  for(t=37;t<=39.5;t+=0.5)g+=svgEl('line',{x1:ml,x2:W-mr,y1:Y(t),y2:Y(t),stroke:'var(--line)','stroke-width':1})+svgEl('text',{x:ml-6,y:Y(t)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'},t.toFixed(1));
+  g+=svgEl('line',{x1:ml,x2:W-mr,y1:Y(38.5),y2:Y(38.5),stroke:'var(--lv3)','stroke-width':1.5,'stroke-dasharray':'5 4'});
+  g+=svgEl('text',{x:W-mr,y:Y(38.5)-5,'text-anchor':'end','font-size':11,fill:'var(--lv3)'},'38.5 °C limit');
+  var step=dur>150?60:30;
+  for(i=0;i<=dur;i+=step)g+=svgEl('text',{x:X(Math.min(i,dur-1)),y:Ht-mb+30,'text-anchor':i>=dur?'end':'middle','font-size':11,fill:'var(--muted)'},hhmm(nowMin+i));
+  for(i=0;i<dur;i++)g+=svgEl('rect',{x:X(i),y:Ht-mb+8,width:(W-ml-mr)/dur,height:10,fill:'var(--lv'+Math.min(3,o.lvl[i])+')'});
+  var pts=o.est.map(function(v,i){return X(i).toFixed(1)+','+Y(v).toFixed(1);}).join(' ');
+  g+=svgEl('polyline',{points:pts,fill:'none',stroke:'var(--accent)','stroke-width':2.5,'stroke-linejoin':'round'});
+  return svgEl('svg',{viewBox:'0 0 '+W+' '+Ht,width:'100%',role:'img','aria-label':'Estimated body heat load over your next work block'},g);
+}
+var lvLast='';
+function lvRender(){
+  var box=$('lvOut'),info=lvEnv();
+  $('lvDurLbl').textContent=$('lvDur').value;
+  if($('lvSrc').value!=='live'&&lvLast!=='live-err'){}
+  var src=$('lvSrc').value;
+  $('lvLocBox').hidden=src!=='live';['lvManA','lvManB','lvManC'].forEach(function(id){$(id).hidden=src!=='manual';});
+  $('lvLoc').textContent=src==='live'&&LV.loc?'Weather for '+LV.loc.label+' ('+LV.loc.lat.toFixed(2)+', '+LV.loc.lon.toFixed(2)+'). Only these coordinates are sent to Open-Meteo. Nothing you enter here is stored or sent anywhere.':'Nothing you enter here is stored or sent anywhere.';
+  if(info.error){box.innerHTML='<div class="card"><p class="muted">'+esc(info.error)+'</p></div>';return;}
+  var task=$('lvTask').value,ppe=$('lvPpe').value,acc=parseFloat($('lvAcc').value),dur=+$('lvDur').value,lang=$('lvLang').value,rtl=(lang==='ar'||lang==='ur');
+  var o=lvRun(info,task,ppe,acc,dur),lv=Math.min(3,o.maxL);
+  var tag='Alert level '+lv+' of 4 · worst point in your next '+dur+' min of '+task+' work';
+  var adv;
+  if(o.firstL3!=null&&o.firstL3<=2)adv='These conditions are already too hot for this job and clothing. <b>Do not start</b> without shade, a cooling plan and your supervisor\'s agreement.';
+  else if(o.firstL3!=null)adv='Stop work by <b>'+hhmm(info.nowMin+o.firstL3)+'</b> (in '+o.firstL3+' min), go somewhere cool and tell your supervisor.';
+  else if(o.firstL2!=null)adv='Plan a 15-minute break in shade by <b>'+hhmm(info.nowMin+o.firstL2)+'</b> (in '+o.firstL2+' min) and drink water.';
+  else adv='No break is needed for heat alone in this window. Keep drinking water regularly.';
+  var chips=['<span class="chip">'+esc(info.label)+'</span>'];
+  if(info.env){
+    var e0=info.env[0],w0=H.wbgtSun(e0),caf=H.PPE[ppe].caf,lim=H.limitWBGT(H.METAB[task],acc);
+    chips.push('<span class="chip">Now '+f1(e0.ta)+' °C · '+f0(e0.rh)+'% humidity · sun '+f0(e0.solar)+' W/m²</span>');
+    chips.push('<span class="chip">Heat index (WBGT) '+f1(w0)+' °C'+(caf?' + '+caf+' clothing':'')+' vs your limit '+f1(lim)+' °C</span>');
+    var site=H.siteLevelFromEnv(e0,task,acc,ppe,R.tuned.threshold.offs);
+    chips.push('<span class="chip">A single site-wide rule would show level '+site+'</span>');
+  }
+  chips.push('<span class="chip'+(o.ladder>=2?' warn':'')+'">Data: '+LADDER[o.ladder===3?3:(info.env?1:3)].replace('Site weather only',src==='live'?'Live weather':'Weather you entered')+'</span>');
+  box.innerHTML='<div class="grid2"><div class="phone" aria-label="Your alert">'+
+    '<div class="alert l'+lv+'" aria-live="polite"><span class="lvtag">'+esc(tag)+'</span><span class="lvname '+(rtl?'rtl':'')+'" lang="'+lang+'">'+esc(LVL[lang][lv])+'</span><p class="act '+(rtl?'rtl':'')+'" lang="'+lang+'">'+esc(H.ACTIONS[lang][lv])+'</p></div>'+
+    '<div class="stat-row"><div class="stat"><span class="label">Time to safe limit</span><b>'+(o.ttl==null?'> '+dur+' min':(o.ttl===0?'Now':o.ttl+' min'))+'</b><span class="muted" style="font-size:12px">working non-stop, starting cool and hydrated</span></div>'+
+    '<div class="stat"><span class="label">Peak body heat (estimate)</span><b>'+f1(o.peak)+' °C</b><div class="gauge" aria-hidden="true"><i style="left:'+(Math.max(0,Math.min(1,(o.peak-37)/2.5))*100)+'%"></i></div></div></div>'+
+    '<p>'+adv+'</p><p class="muted" style="font-size:12px">Alert wording is a draft translation. Native-speaking occupational health staff must review it before field use.</p></div>'+
+    '<div style="display:flex;flex-direction:column;gap:16px;min-width:0"><div class="card chart"><h3 style="margin-bottom:4px">Your next work block</h3><p class="muted" style="margin-bottom:10px">Forecast body heat load if you work without a break (the alert never goes above Danger here; Emergency is only for a reported symptom). The strip under the line shows the alert level at each minute.</p><div>'+lvChart(o,dur,info.nowMin)+'</div></div>'+
+    '<div class="card"><h3 style="margin-bottom:8px">What this is based on</h3><div class="chips" style="margin-bottom:10px">'+chips.join('')+'</div><p class="muted">The twin starts from a normal body temperature and a mild water deficit, then applies your job, clothing and acclimatisation to the weather above, including the forecast for the coming hours. It cannot know your fitness, illness, medication or how much you have drunk, so treat it as a guide and stop if you feel unwell.</p></div></div></div>';
+}
+
+/* ---------- wiring ---------- */
+function setTab(t){
+  st.tab=t;
+  [['worker','p-worker'],['live','p-live'],['sup','p-sup'],['ev','p-ev'],['gov','p-gov']].forEach(function(p){
+    var on=p[0]===t;$('tab-'+p[0]).setAttribute('aria-selected',on);$('p-'+p[1].slice(2)).hidden=!on;
+  });
+  $('simBar').style.display=t==='live'?'none':'';
+  if(t==='sup')renderSup();
+  if(t==='worker')renderWorker();
+  if(t==='live')lvRender();
+  try{if(location.hash!=='#'+t)history.replaceState(null,'','#'+t);}catch(e){}
+}
+function redrawTime(){
+  $('timeLbl').textContent=clock(st.min);
+  $('clock').value=st.min;
+  if(st.tab==='worker')renderWorker();
+  if(st.tab==='sup')renderSup();
+}
+function full(){
+  compute();
+  updateConsent();
+  renderWorker();
+  if(st.tab==='sup')renderSup();
+}
+function init(){
+  $('cond').innerHTML=Object.keys(S.CONDITIONS).map(function(k){var c=S.CONDITIONS[k];return '<option value="'+k+'"'+(k===st.cond?' selected':'')+'>'+c.label+' (up to '+c.tmax+' °C)</option>';}).join('');
+  $('lang').innerHTML=Object.keys(LANGS).map(function(k){return '<option value="'+k+'">'+LANGS[k]+'</option>';}).join('');
+  compute();
+  pickInteresting();
+  $('sel').innerHTML=day.workers.map(function(x,i){return '<option value="'+i+'">Worker '+NAMES[i]+' · '+CREWL[x.crew]+'</option>';}).join('');
+  $('sel').value=st.sel;
+  renderEvidence();renderGov();
+  renderWorker();
+  $('cond').addEventListener('change',function(){st.cond=this.value;full();});
+  $('wear').addEventListener('change',function(){st.wear=this.checked;full();});
+  $('outage').addEventListener('change',function(){st.outage=this.checked;full();});
+  $('dead').addEventListener('change',function(){st.dead=this.checked;full();});
+  $('reseed').addEventListener('click',function(){st.seed++;compute();pickInteresting();$('sel').value=st.sel;renderWorker();if(st.tab==='sup')renderSup();});
+  $('clock').addEventListener('input',function(){st.min=+this.value;redrawTime();});
+  $('sel').addEventListener('change',function(){st.sel=+this.value;st.sym=null;renderWorker();});
+  $('lang').addEventListener('change',function(){st.lang=this.value;renderWorker();});
+  $('truth').addEventListener('change',function(){st.truth=this.checked;renderWorker();});
+  $('symMild').addEventListener('click',function(){st.sym=st.sym==='mild'?null:'mild';renderWorker();});
+  $('symSev').addEventListener('click',function(){st.sym=st.sym==='severe'?null:'severe';renderWorker();});
+  $('crewN').addEventListener('change',function(){st.crewN=+this.value;renderSup();$('planOut').innerHTML='<p class="muted">Press the button to plan from the selected time.</p>';});
+  $('task').addEventListener('change',function(){st.task=this.value;});
+  $('plan').addEventListener('click',runPlan);
+  $('emg').addEventListener('click',emgDemo);
+  $('play').addEventListener('click',function(){
+    st.play=!st.play;this.textContent=st.play?'Pause':'Play';
+    if(timer){clearInterval(timer);timer=null;}
+    if(st.play){if(st.min>=479)st.min=0;timer=setInterval(function(){st.min=Math.min(479,st.min+3);redrawTime();if(st.min>=479){st.play=false;$('play').textContent='Play';clearInterval(timer);timer=null;}},140);}
+  });
+  ['worker','live','sup','ev','gov'].forEach(function(t){$('tab-'+t).addEventListener('click',function(){setTab(t);});});
+  $('theme').addEventListener('click',function(){
+    var r=document.documentElement,cur=r.getAttribute('data-theme');
+    var dark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+    r.setAttribute('data-theme',dark?'light':'dark');
+    renderWorker();
+  });
+  $('lvLang').innerHTML=Object.keys(LANGS).map(function(k){return '<option value="'+k+'">'+LANGS[k]+'</option>';}).join('');
+  $('lvSrc').addEventListener('change',function(){if(this.value!=='live')lvMsg('');});
+  ['lvSrc','lvTa','lvRh','lvSun','lvTask','lvPpe','lvAcc','lvDur','lvLang'].forEach(function(id){$(id).addEventListener(id==='lvTa'||id==='lvRh'||id==='lvDur'?'input':'change',lvRender);});
+  $('lvSearch').addEventListener('click',lvSearch);
+  $('lvPlace').addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();lvSearch();}});
+  $('lvGeo').addEventListener('click',lvGeo);
+  var hs=(location.hash||'').slice(1);
+  if(['worker','live','sup','ev','gov'].indexOf(hs)>=0)setTab(hs);
+  window.addEventListener('hashchange',function(){var h=(location.hash||'').slice(1);if(['worker','live','sup','ev','gov'].indexOf(h)>=0&&h!==st.tab)setTab(h);});
+}
+init();
+})();
+</script>
+
+</body></html>
